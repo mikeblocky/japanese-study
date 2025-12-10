@@ -12,6 +12,23 @@ import API_BASE from './api';
 const API_URL = `${API_BASE}/api`;
 
 /**
+ * Test Firestore Connection
+ */
+export async function testFirestoreConnection() {
+    try {
+        await setDoc(doc(db, 'test_collection', 'connection_test'), {
+            timestamp: serverTimestamp(),
+            status: 'connected'
+        });
+        console.log('✅ Firestore connection test successful');
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore connection test failed:', error);
+        return false;
+    }
+}
+
+/**
  * Migrate all data from H2 to Firestore (Direct)
  */
 export async function migrateAllData() {
