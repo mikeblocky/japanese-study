@@ -136,13 +136,13 @@ export default function DataMigration() {
 
                 {/* Section 2: Backup/Restore Strategy */}
                 <div className="space-y-4 p-4 border rounded-lg bg-blue-50/30">
-                     <h3 className="font-medium flex items-center gap-2">
+                    <h3 className="font-medium flex items-center gap-2">
                         <Database className="w-4 h-4" /> Backup & Restore Strategy
                         <span className="text-xs font-normal text-muted-foreground ml-auto">Recommended if Network Blocks</span>
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                        1. Export data from Localhost (Spring Boot) <br/>
-                        2. Upload file here (on Vercel/Deployed app) to import to Firestore
+                        1. Export data from Localhost (Spring Boot) <br />
+                        2. Upload file here to import to <strong>Fireworks (Cloud)</strong> OR <strong>Postgres (Render)</strong>
                     </p>
                     <div className="flex flex-wrap gap-3">
                         <button
@@ -152,23 +152,36 @@ export default function DataMigration() {
                         >
                             <Download className="w-4 h-4" /> Export JSON
                         </button>
-                        
-                        <label className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer disabled:opacity-50 flex items-center gap-2 text-sm">
-                            <Upload className="w-4 h-4" /> Import JSON
-                            <input 
-                                type="file" 
-                                accept=".json" 
-                                onChange={handleImport}
-                                disabled={status !== 'idle'}
-                                className="hidden" 
-                            />
-                        </label>
+
+                        <div className="flex gap-2">
+                            <label className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer disabled:opacity-50 flex items-center gap-2 text-sm">
+                                <Upload className="w-4 h-4" /> Import to Firestore
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={(e) => handleImport(e, 'firestore')}
+                                    disabled={status !== 'idle'}
+                                    className="hidden"
+                                />
+                            </label>
+
+                            <label className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 cursor-pointer disabled:opacity-50 flex items-center gap-2 text-sm">
+                                <Upload className="w-4 h-4" /> Restore to SQL Backend
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={(e) => handleImport(e, 'sql')}
+                                    disabled={status !== 'idle'}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
                     </div>
                 </div>
-                
-                 {/* Section 3: Utils */}
+
+                {/* Section 3: Utils */}
                 <div className="pt-4 border-t">
-                     <button
+                    <button
                         onClick={handleCreateUsers}
                         disabled={status !== 'idle'}
                         className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 text-muted-foreground"
