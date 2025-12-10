@@ -72,24 +72,42 @@ export default function DataMigration() {
 
     const handleImport = async (e, type = 'firestore') => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            addLog('⚠️ No file selected.');
+            return;
+        }
 
         try {
+            console.log('File selected:', file.name, 'Type:', type);
             setStatus('processing');
+            addLog(`📂 File selected: ${file.name}`);
             addLog(`📥 Reading file for ${type === 'sql' ? 'SQL Backend' : 'Firestore'}...`);
+
             const text = await file.text();
-            const json = JSON.parse(text);
+            addLog(`📄 File read (${text.length} bytes). Parsing JSON...`);
+
+            let json;
+            try {
+                json = JSON.parse(text);
+                addLog('✅ JSON parsed successfully.');
+            } catch (jsonErr) {
+                throw new Error('Invalid JSON file');
+            }
 
             if (type === 'sql') {
                 addLog('🚀 Sending data to Backend API (Postgres/H2)...');
-                await restoreToBackend(json);
+                addLog('⏳ This might take a moment...');
+                const result = await restoreToBackend(json);
+                addLog(`✅ Server response: ${JSON.stringify(result)}`);
             } else {
                 addLog('🚀 Importing to Firestore...');
                 await importDataFromJson(json);
             }
             addLog('🎉 Import completed successfully!');
         } catch (err) {
-            addLog(`❌ Import failed: ${err.message} `);
+            console.error('Import error:', err);
+            addLog(`❌ Import failed: ${err.message}`);
+            if (err.stack) console.error(err.stack);
         } finally {
             setStatus('idle');
             // Reset file input
