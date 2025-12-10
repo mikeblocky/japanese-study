@@ -237,8 +237,34 @@ export async function createUserProfile(user, role = 'STUDENT') {
 }
 
 /**
- * Preset Users Creation
+ * Restore data to Spring Boot Backend (SQL)
  */
+export async function restoreToBackend(jsonData) {
+    console.log('🔙 Restoring data to Backend SQL...');
+
+    try {
+        const res = await fetch(`${API_URL}/admin/import`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-Id': '1' // Assuming ID 1 is the Admin created by DataSeeder
+            },
+            body: JSON.stringify(jsonData)
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Import failed');
+        }
+
+        const result = await res.json();
+        console.log(`✅ Restore complete! Managed ${result.message}`);
+        return result;
+    } catch (error) {
+        console.error('Restore failed:', error);
+        throw error;
+    }
+}
 export const createPresetUsers = async (currentUser) => {
     if (!currentUser) return;
     await createUserProfile({ ...currentUser, email: 'admin@example.com', uid: 'admin_user_id', displayName: 'Admin User' }, 'ADMIN');
