@@ -20,7 +20,7 @@ export async function migrateAllData() {
     try {
         // 1. Migrate Courses
         console.log('📚 Migrating courses...');
-        const coursesRes = await fetch(`${API_BASE}/data/courses`);
+        const coursesRes = await fetch(`${API_URL}/data/courses`);
         const courses = await coursesRes.json();
 
         for (const course of courses) {
