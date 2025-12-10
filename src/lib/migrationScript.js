@@ -247,7 +247,8 @@ export async function restoreToBackend(jsonData) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-User-Id': '1' // Assuming ID 1 is the Admin created by DataSeeder
+                'X-User-Id': '1',
+                'X-Migration-Secret': 'JAPANESE_STUDY_MIGRATION_2025'
             },
             body: JSON.stringify(jsonData)
         });
