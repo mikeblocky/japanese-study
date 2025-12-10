@@ -3,7 +3,7 @@
  * Temporary component to run data migration from H2 to Firestore
  */
 import React, { useState } from 'react';
-import { migrateAllData, testFirestoreConnection, createPresetUsers, exportDataToJson, importDataFromJson } from '@/lib/migrationScript';
+import { migrateAllData, testFirestoreConnection, createPresetUsers, exportDataToJson, importDataFromJson, restoreToBackend } from '@/lib/migrationScript';
 import { Download, Upload, Server, Database } from 'lucide-react';
 
 export default function DataMigration() {
@@ -42,7 +42,7 @@ export default function DataMigration() {
             await migrateAllData();
             addLog('🎉 Migration completed successfully!');
         } catch (err) {
-            addLog(`❌ Failed: ${err.message}`);
+            addLog(`❌ Failed: ${err.message} `);
         } finally {
             console.log = originalLog;
             setStatus('done');
@@ -64,29 +64,36 @@ export default function DataMigration() {
             a.click();
             addLog('✅ Data exported! Now upload this file on the Vercel app.');
         } catch (err) {
-            addLog(`❌ Export failed: ${err.message}`);
+            addLog(`❌ Export failed: ${err.message} `);
         } finally {
             setStatus('idle');
         }
     };
 
-    const handleImport = async (e) => {
+    const handleImport = async (e, type = 'firestore') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         try {
             setStatus('processing');
-            addLog('📥 Reading file...');
+            addLog(`📥 Reading file for ${type === 'sql' ? 'SQL Backend' : 'Firestore'}...`);
             const text = await file.text();
             const json = JSON.parse(text);
 
-            addLog('🚀 Importing to Firestore...');
-            await importDataFromJson(json);
+            if (type === 'sql') {
+                addLog('🚀 Sending data to Backend API (Postgres/H2)...');
+                await restoreToBackend(json);
+            } else {
+                addLog('🚀 Importing to Firestore...');
+                await importDataFromJson(json);
+            }
             addLog('🎉 Import completed successfully!');
         } catch (err) {
-            addLog(`❌ Import failed: ${err.message}`);
+            addLog(`❌ Import failed: ${err.message} `);
         } finally {
             setStatus('idle');
+            // Reset file input
+            e.target.value = '';
         }
     };
 
