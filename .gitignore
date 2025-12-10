@@ -1,2 +1,16 @@
-node_modules
-node_modules
+# Dependencies
+node_modules/
+
+# Environment files (contain secrets)
+.env
+.env.local
+
+# Build output (Vercel will build fresh)
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
