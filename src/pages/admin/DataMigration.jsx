@@ -3,7 +3,8 @@
  * Temporary component to run data migration from H2 to Firestore
  */
 import React, { useState } from 'react';
-import { migrateAllData, testFirestoreConnection, createPresetUsers } from '@/lib/migrationScript';
+import { migrateAllData, testFirestoreConnection, createPresetUsers, exportDataToJson, importDataFromJson } from '@/lib/migrationScript';
+import { Download, Upload, Server, Database } from 'lucide-react';
 
 export default function DataMigration() {
     const [status, setStatus] = useState('idle');
@@ -24,32 +25,75 @@ export default function DataMigration() {
     };
 
     const handleMigrate = async () => {
-        if (!window.confirm('This will migrate all data from H2 to Firestore. Continue?')) return;
+        if (!window.confirm('This will migrate all data directly. Only works if network allows. Continue?')) return;
 
         setStatus('migrating');
         setLog([]);
-        addLog('🚀 Starting migration...');
+        addLog('🚀 Starting direct migration...');
 
-        // Intercept console.log to capture migration progress
+        // Intercept console.log
         const originalLog = console.log;
         console.log = (...args) => {
             originalLog(...args);
             addLog(args.join(' '));
         };
 
-        const result = await migrateAllData();
-
-        console.log = originalLog;
-
-        if (result.success) {
-            addLog('');
+        try {
+            await migrateAllData();
             addLog('🎉 Migration completed successfully!');
-            addLog('You can now use Firebase as your data source.');
-        } else {
-            addLog(`❌ Migration failed: ${result.message}`);
+        } catch (err) {
+            addLog(`❌ Failed: ${err.message}`);
+        } finally {
+            console.log = originalLog;
+            setStatus('done');
         }
+    };
 
-        setStatus('done');
+    const handleExport = async () => {
+        try {
+            setStatus('processing');
+            addLog('📤 Exporting data to JSON...');
+            const data = await exportDataToJson();
+
+            // Create download
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `japanese_study_data_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            addLog('✅ Data exported! Now upload this file on the Vercel app.');
+        } catch (err) {
+            addLog(`❌ Export failed: ${err.message}`);
+        } finally {
+            setStatus('idle');
+        }
+    };
+
+    const handleImport = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setStatus('processing');
+            addLog('📥 Reading file...');
+            const text = await file.text();
+            const json = JSON.parse(text);
+
+            addLog('🚀 Importing to Firestore...');
+            await importDataFromJson(json);
+            addLog('🎉 Import completed successfully!');
+        } catch (err) {
+            addLog(`❌ Import failed: ${err.message}`);
+        } finally {
+            setStatus('idle');
+        }
+    };
+
+    const handleCreateUsers = async () => {
+        // Mock current user for simplified call
+        await createPresetUsers({ uid: 'current_admin', email: 'admin@example.com' });
+        addLog('✅ User profiles created');
     };
 
     return (
@@ -65,37 +109,73 @@ export default function DataMigration() {
                 <strong>⚠️ Important:</strong> Make sure your Spring Boot backend is running on localhost:8080 before migrating.
             </div>
 
-            <div className="flex flex-wrap gap-3">
-                <button
-                    onClick={handleTestConnection}
-                    disabled={status === 'migrating'}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                    Test Firestore Connection
-                </button>
-                <button
-                    onClick={async () => {
-                        setStatus('creating');
-                        setLog([]);
-                        addLog('👥 Creating preset users...');
-                        const originalLog = console.log;
-                        console.log = (...args) => { originalLog(...args); addLog(args.join(' ')); };
-                        await createPresetUsers();
-                        console.log = originalLog;
-                        setStatus('done');
-                    }}
-                    disabled={status === 'migrating'}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-                >
-                    Create Preset Users
-                </button>
-                <button
-                    onClick={handleMigrate}
-                    disabled={status === 'migrating'}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                >
-                    {status === 'migrating' ? 'Migrating...' : 'Migrate All Data'}
-                </button>
+            <div className="grid gap-6">
+                {/* Section 1: Direct Migration (Local Network) */}
+                <div className="space-y-4 p-4 border rounded-lg bg-gray-50/50">
+                    <h3 className="font-medium flex items-center gap-2">
+                        <Server className="w-4 h-4" /> Direct Migration
+                        <span className="text-xs font-normal text-muted-foreground ml-auto">Requires local Firestore Access</span>
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={handleTestConnection}
+                            disabled={status !== 'idle'}
+                            className="px-4 py-2 border bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm"
+                        >
+                            Test Connection
+                        </button>
+                        <button
+                            onClick={handleMigrate}
+                            disabled={status !== 'idle'}
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm"
+                        >
+                            Start Direct Migration
+                        </button>
+                    </div>
+                </div>
+
+                {/* Section 2: Backup/Restore Strategy */}
+                <div className="space-y-4 p-4 border rounded-lg bg-blue-50/30">
+                     <h3 className="font-medium flex items-center gap-2">
+                        <Database className="w-4 h-4" /> Backup & Restore Strategy
+                        <span className="text-xs font-normal text-muted-foreground ml-auto">Recommended if Network Blocks</span>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                        1. Export data from Localhost (Spring Boot) <br/>
+                        2. Upload file here (on Vercel/Deployed app) to import to Firestore
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={handleExport}
+                            disabled={status !== 'idle'}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                            <Download className="w-4 h-4" /> Export JSON
+                        </button>
+                        
+                        <label className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer disabled:opacity-50 flex items-center gap-2 text-sm">
+                            <Upload className="w-4 h-4" /> Import JSON
+                            <input 
+                                type="file" 
+                                accept=".json" 
+                                onChange={handleImport}
+                                disabled={status !== 'idle'}
+                                className="hidden" 
+                            />
+                        </label>
+                    </div>
+                </div>
+                
+                 {/* Section 3: Utils */}
+                <div className="pt-4 border-t">
+                     <button
+                        onClick={handleCreateUsers}
+                        disabled={status !== 'idle'}
+                        className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50 text-muted-foreground"
+                    >
+                        Re-create Preset Users
+                    </button>
+                </div>
             </div>
 
             {log.length > 0 && (

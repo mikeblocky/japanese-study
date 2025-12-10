@@ -12,7 +12,7 @@ import API_BASE from './api';
 const API_URL = `${API_BASE}/api`;
 
 /**
- * Migrate all data from H2 to Firestore
+ * Migrate all data from H2 to Firestore (Direct)
  */
 export async function migrateAllData() {
     console.log('🚀 Starting data migration to Firestore...');
@@ -39,154 +39,187 @@ export async function migrateAllData() {
                     courseId: course.id.toString(),
                     orderIndex: topic.orderIndex || topic.id
                 });
+                console.log(`    - Topic: ${topic.title}`);
 
-                // 3. Migrate Items for each topic
-                const itemsRes = await fetch(`${API_BASE}/data/topics/${topic.id}/items`);
+                // 3. Migrate Study Items for each topic
+                const itemsRes = await fetch(`${API_URL}/data/topics/${topic.id}/items`);
                 const items = await itemsRes.json();
 
-                // Use batch writes for efficiency (max 500 per batch)
-                const batchSize = 400;
-                for (let i = 0; i < items.length; i += batchSize) {
-                    const batch = writeBatch(db);
-                    const batchItems = items.slice(i, i + batchSize);
+                const batch = writeBatch(db);
+                let opCount = 0;
 
-                    for (const item of batchItems) {
-                        const itemRef = doc(db, 'studyItems', item.id.toString());
-                        batch.set(itemRef, {
-                            primaryText: item.primaryText || '',
-                            secondaryText: item.secondaryText || '',
-                            meaning: item.meaning || '',
-                            detailedInfo: item.detailedInfo || '',
-                            imageUrl: item.imageUrl || '',
-                            audioUrl: item.audioUrl || '',
-                            courseId: course.id.toString(),
-                            topicId: topic.id.toString(),
-                            type: item.type?.name || 'vocabulary'
-                        });
-                    }
-
-                    await batch.commit();
+                for (const item of items) {
+                    const itemRef = doc(db, 'study_items', item.id.toString());
+                    batch.set(itemRef, {
+                        word: item.word,
+                        reading: item.reading,
+                        meaning: item.meaning,
+                        type: item.type,
+                        topicId: topic.id.toString(),
+                        exampleSentence: item.exampleSentence,
+                        exampleReading: item.exampleReading,
+                        exampleMeaning: item.exampleMeaning,
+                        audioUrl: item.audioUrl
+                    });
+                    opCount++;
                 }
 
-                console.log(`    ✓ Topic: ${topic.title} (${items.length} items)`);
+                if (opCount > 0) {
+                    await batch.commit();
+                    console.log(`      + Migrated ${items.length} items`);
+                }
             }
         }
 
-        console.log('✅ Migration complete!');
-        return { success: true, message: 'Migration completed successfully' };
-
+        console.log('✨ Migration Complete!');
+        return { success: true };
     } catch (error) {
         console.error('❌ Migration failed:', error);
-        return { success: false, message: error.message };
+        throw error;
     }
 }
 
 /**
- * Migrate item types
+ * Export all data from API to JSON object
  */
-export async function migrateItemTypes() {
-    console.log('📝 Migrating item types...');
-    try {
-        const res = await fetch(`${API_BASE}/data/types`);
-        const types = await res.json();
+export async function exportDataToJson() {
+    console.log('📤 Exporting data from API...');
+    const data = {
+        exportedAt: new Date().toISOString(),
+        courses: []
+    };
 
-        for (const type of types) {
-            await setDoc(doc(db, 'itemTypes', type.id.toString()), {
-                name: type.name,
-                description: type.description || ''
-            });
-            console.log(`  ✓ Type: ${type.name}`);
+    try {
+        const coursesRes = await fetch(`${API_URL}/data/courses`);
+        const courses = await coursesRes.json();
+
+        for (const course of courses) {
+            const courseData = { ...course, topics: [] };
+
+            // Get topics
+            const topicsRes = await fetch(`${API_URL}/data/courses/${course.id}/topics`);
+            const topics = await topicsRes.json();
+
+            for (const topic of topics) {
+                const topicData = { ...topic, items: [] };
+
+                // Get items
+                const itemsRes = await fetch(`${API_URL}/data/topics/${topic.id}/items`);
+                const items = await itemsRes.json();
+                topicData.items = items;
+
+                courseData.topics.push(topicData);
+            }
+            data.courses.push(courseData);
         }
 
-        return { success: true };
+        return data;
     } catch (error) {
-        console.error('Failed to migrate types:', error);
-        return { success: false, message: error.message };
+        console.error('Export failed:', error);
+        throw error;
     }
 }
 
 /**
- * Quick test to verify Firestore connection
+ * Import data from JSON object to Firestore
  */
-export async function testFirestoreConnection() {
-    try {
-        const testRef = doc(db, '_test', 'connection');
-        await setDoc(testRef, {
-            timestamp: new Date().toISOString(),
-            test: true
+export async function importDataFromJson(jsonData) {
+    console.log('📥 Importing data to Firestore...');
+    const courses = jsonData.courses || [];
+
+    // Batch 1: Courses & Topics
+    const batch1 = writeBatch(db);
+    let opCount1 = 0;
+
+    // Batch 2: Study Items (separate batch to avoid limit)
+    const batch2 = writeBatch(db);
+    let opCount2 = 0;
+
+    for (const course of courses) {
+        const courseRef = doc(db, 'courses', course.id.toString());
+        batch1.set(courseRef, {
+            title: course.title,
+            description: course.description,
+            orderIndex: course.orderIndex || course.id
         });
-        console.log('✅ Firestore connection working!');
-        return true;
+        opCount1++;
+
+        for (const topic of course.topics) {
+            const topicRef = doc(db, 'topics', topic.id.toString());
+            batch1.set(topicRef, {
+                title: topic.title,
+                description: topic.description,
+                courseId: course.id.toString(),
+                orderIndex: topic.orderIndex || topic.id
+            });
+            opCount1++;
+
+            for (const item of topic.items) {
+                const itemRef = doc(db, 'study_items', item.id.toString());
+                batch2.set(itemRef, {
+                    word: item.word,
+                    reading: item.reading,
+                    meaning: item.meaning,
+                    type: item.type,
+                    topicId: topic.id.toString(),
+                    exampleSentence: item.exampleSentence,
+                    exampleReading: item.exampleReading,
+                    exampleMeaning: item.exampleMeaning,
+                    audioUrl: item.audioUrl
+                });
+                opCount2++;
+
+                // Commit batches if they get full
+                if (opCount2 >= 450) {
+                    await batch2.commit();
+                    opCount2 = 0;
+                }
+            }
+
+            if (opCount1 >= 450) {
+                await batch1.commit();
+                opCount1 = 0;
+            }
+        }
+    }
+
+    if (opCount1 > 0) await batch1.commit();
+    if (opCount2 > 0) await batch2.commit();
+
+    console.log('✅ Import complete!');
+}
+
+/**
+ * Creates user profile in Firestore
+ */
+export async function createUserProfile(user, role = 'STUDENT') {
+    if (!user) return;
+    try {
+        await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || user.email.split('@')[0],
+            role: role,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            studyStreak: 0,
+            totalStudyTime: 0,
+            xp: 0,
+            level: 1
+        }, { merge: true });
+        console.log(`User profile created for ${user.email} (${role})`);
     } catch (error) {
-        console.error('❌ Firestore connection failed:', error);
-        return false;
+        console.error("Error creating user profile:", error);
     }
 }
 
 /**
- * Create preset users in Firestore
- * Note: These are Firestore profiles only. To create Firebase Auth accounts,
- * users need to sign up through the app or be created via Firebase Console.
+ * Preset Users Creation
  */
-export async function createPresetUsers() {
-    console.log('👥 Creating preset user profiles...');
-
-    const presetUsers = [
-        {
-            id: 'admin-preset',
-            username: 'admin',
-            email: 'admin@management.app',
-            role: 'ADMIN',
-            displayName: 'Administrator'
-        },
-        {
-            id: 'manager-preset',
-            username: 'manager1',
-            email: 'manager@management.app',
-            role: 'MANAGER',
-            displayName: 'Manager'
-        },
-        {
-            id: 'student-preset',
-            username: 'student1',
-            email: 'student@management.app',
-            role: 'STUDENT',
-            displayName: 'Student'
-        }
-    ];
-
-    try {
-        for (const user of presetUsers) {
-            await setDoc(doc(db, 'users', user.id), {
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                displayName: user.displayName,
-                createdAt: new Date().toISOString(),
-                isPreset: true
-            });
-            console.log(`  ✓ Created: ${user.username} (${user.role})`);
-        }
-
-        console.log('✅ Preset users created!');
-        console.log('');
-        console.log('⚠️  Note: These are Firestore profiles only.');
-        console.log('   To actually login, create matching Firebase Auth accounts');
-        console.log('   in Firebase Console → Authentication → Users → Add user');
-        console.log('   Or sign up through the app with matching emails.');
-
-        return { success: true };
-    } catch (error) {
-        console.error('❌ Failed to create preset users:', error);
-        return { success: false, message: error.message };
-    }
-}
-
-export default {
-    migrateAllData,
-    migrateItemTypes,
-    testFirestoreConnection,
-    createPresetUsers
+export const createPresetUsers = async (currentUser) => {
+    if (!currentUser) return;
+    await createUserProfile({ ...currentUser, email: 'admin@example.com', uid: 'admin_user_id', displayName: 'Admin User' }, 'ADMIN');
+    await createUserProfile({ ...currentUser, email: 'manager@example.com', uid: 'manager_user_id', displayName: 'Manager User' }, 'MANAGER');
+    await createUserProfile({ ...currentUser, email: 'student@example.com', uid: 'student_user_id', displayName: 'Student User' }, 'STUDENT');
+    console.log('Preset users created/updated');
 };
-
-
