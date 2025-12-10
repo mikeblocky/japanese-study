@@ -18,17 +18,33 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     // Get user profile from Firestore (with timeout to prevent hanging)
-    const getUserProfile = async (uid) => {
+    const getUserProfile = async (uid, email) => {
         try {
             const docRef = doc(db, 'users', uid);
             // Add timeout to prevent hanging on offline
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Firestore timeout')), 5000)
+                setTimeout(() => reject(new Error('Firestore timeout')), 3000)
             );
             const snapshot = await Promise.race([getDoc(docRef), timeoutPromise]);
             return snapshot.exists() ? snapshot.data() : null;
         } catch (err) {
             console.warn("Could not get user profile:", err.message);
+
+            // FALLBACK TO SQL BACKEND
+            if (email) {
+                try {
+                    console.log('Falling back to SQL Backend for Role...');
+                    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+                    const res = await fetch(`${API_BASE}/api/users/check-role?email=${email}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        console.log('Got Role from SQL Backend:', data.role);
+                        return { role: data.role };
+                    }
+                } catch (apiErr) {
+                    console.error('SQL Fallback Failed:', apiErr);
+                }
+            }
             return null;
         }
     };
@@ -84,7 +100,7 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
 
                 // Load Firestore profile in background (non-blocking)
-                getUserProfile(firebaseUser.uid)
+                getUserProfile(firebaseUser.uid, firebaseUser.email)
                     .then(profile => {
                         if (profile) {
                             console.log('Got Firestore profile, updating role:', profile.role);
