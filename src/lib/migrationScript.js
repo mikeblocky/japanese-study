@@ -173,16 +173,22 @@ export async function importDataFromJson(jsonData) {
 
             for (const item of topic.items) {
                 const itemRef = doc(db, 'study_items', item.id.toString());
+
+                // Map backend fields to Firestore schema
+                // Backend: primaryText, secondaryText, detailedInfo
+                // Firestore: word, reading, exampleSentence
+                const typeName = item.type ? (item.type.name || item.type.toString()) : 'VOCABULARY';
+
                 batch2.set(itemRef, {
-                    word: item.word,
-                    reading: item.reading,
-                    meaning: item.meaning,
-                    type: item.type,
+                    word: item.primaryText || item.word || '',
+                    reading: item.secondaryText || item.reading || '',
+                    meaning: item.meaning || '',
+                    type: typeName,
                     topicId: topic.id.toString(),
-                    exampleSentence: item.exampleSentence,
-                    exampleReading: item.exampleReading,
-                    exampleMeaning: item.exampleMeaning,
-                    audioUrl: item.audioUrl
+                    exampleSentence: item.detailedInfo || item.exampleSentence || '',
+                    exampleReading: item.exampleReading || '',
+                    exampleMeaning: item.exampleMeaning || '',
+                    audioUrl: item.audioUrl || ''
                 });
                 opCount2++;
 
