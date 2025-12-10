@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Users, Database, Server, BarChart3, Zap, HardDrive, Cpu,
@@ -8,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Dashboard - System overview with real-time metrics
@@ -188,3 +189,6 @@ export default function AdminDashboard() {
         </div>
     );
 }
+
+
+

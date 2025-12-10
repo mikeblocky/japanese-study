@@ -6,9 +6,10 @@
  */
 
 import { db } from './firebase';
-import { collection, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import API_BASE from './api';
 
-const API_BASE = 'http://localhost:8080/api';
+const API_URL = `${API_BASE}/api`;
 
 /**
  * Migrate all data from H2 to Firestore
@@ -187,3 +188,5 @@ export default {
     testFirestoreConnection,
     createPresetUsers
 };
+
+

@@ -1,5 +1,21 @@
-// API configuration
+// API configuration - central place for all API calls
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+// Helper function to build API URLs
+export const api = (path) => `${API_BASE}/api${path}`;
+
+// Fetch helper with common options
+export const apiFetch = async (path, options = {}) => {
+    const url = api(path);
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+    });
+    return response;
+};
 
 export const API_ENDPOINTS = {
     // Auth
@@ -11,18 +27,25 @@ export const API_ENDPOINTS = {
     topics: (courseId) => `${API_BASE}/api/data/courses/${courseId}/topics`,
     topicItems: (topicId) => `${API_BASE}/api/data/topics/${topicId}/items`,
     types: `${API_BASE}/api/data/types`,
+    items: `${API_BASE}/api/data/items`,
 
     // Study
-    mastery: (userId) => `${API_BASE}/api/study/mastery/${userId}`,
-    submitAnswer: `${API_BASE}/api/study/answer`,
-    sessions: `${API_BASE}/api/study/sessions`,
+    mastery: (userId) => `${API_BASE}/api/sessions/mastery/${userId}`,
+    sessions: `${API_BASE}/api/sessions`,
+    sessionsStart: (userId) => `${API_BASE}/api/sessions/start?userId=${userId}`,
+    sessionsDue: (userId) => `${API_BASE}/api/sessions/due?userId=${userId}`,
+
+    // Stats
+    stats: `${API_BASE}/api/stats/summary`,
+    sessionStats: (userId) => `${API_BASE}/api/sessions/stats?userId=${userId}`,
+
+    // Progress
+    progress: (userId) => `${API_BASE}/api/progress/summary?userId=${userId}`,
 
     // Goals
-    goals: (userId) => `${API_BASE}/api/goals/${userId}`,
-
-    // Users
-    users: `${API_BASE}/api/users`,
-    user: (id) => `${API_BASE}/api/users/${id}`,
+    goals: `${API_BASE}/api/goals`,
 };
 
 export default API_BASE;
+
+

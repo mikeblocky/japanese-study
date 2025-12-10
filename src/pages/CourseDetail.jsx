@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -12,7 +13,7 @@ export default function CourseDetail() {
 
     useEffect(() => {
         // Fetch topics
-        fetch(`http://localhost:8080/api/data/courses/${courseId}/topics`)
+        fetch(`${API_BASE}/api/data/courses/${courseId}/topics`)
             .then(res => res.json())
             .then(data => {
                 const sorted = data.sort((a, b) => a.orderIndex - b.orderIndex);
@@ -25,7 +26,7 @@ export default function CourseDetail() {
             });
 
         // Fetch progress for all topics
-        fetch(`http://localhost:8080/api/progress/summary?userId=1`)
+        fetch(`${API_BASE}/api/progress/summary?userId=1`)
             .then(res => res.json())
             .then(data => {
                 // Convert array to map for easy lookup
@@ -123,3 +124,6 @@ export default function CourseDetail() {
         </div>
     );
 }
+
+
+

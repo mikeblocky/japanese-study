@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Cpu, Activity, HardDrive, Recycle, Clock, Zap, Server,
@@ -8,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Monitoring Page - Deep server metrics (JVM, Threads, GC, Diagnostics)
@@ -406,3 +407,6 @@ export default function AdminMonitoring() {
         </div>
     );
 }
+
+
+

@@ -38,3 +38,5 @@ enableIndexedDbPersistence(db)
 
 export { app, analytics, db, auth };
 export default app;
+
+

@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Users, Database, Server, RefreshCw, Trash2, Plus,
@@ -8,7 +9,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // API helper
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Page - Control Panel styled like other pages
@@ -467,3 +468,6 @@ export default function AdminPage() {
         </div>
     );
 }
+
+
+

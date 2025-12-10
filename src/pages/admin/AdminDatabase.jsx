@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Database, HardDrive, Download, Upload, Trash2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -5,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Database Page - Database stats, backup, and data operations
@@ -177,3 +178,6 @@ export default function AdminDatabase() {
         </div>
     );
 }
+
+
+

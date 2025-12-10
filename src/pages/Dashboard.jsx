@@ -4,6 +4,7 @@ import { ArrowRight, Clock, Flame, Target, Play, ChevronRight } from 'lucide-rea
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import StreakBadge from '@/components/StreakBadge';
+import { api } from '@/lib/api';
 
 export default function Dashboard() {
     const [stats, setStats] = useState({
@@ -17,13 +18,13 @@ export default function Dashboard() {
 
     useEffect(() => {
         // Fetch Due Count
-        fetch('http://localhost:8080/api/sessions/due?userId=1')
+        fetch(api('/sessions/due?userId=1'))
             .then(res => res.json())
             .then(data => setDueCount(data.length))
             .catch(err => console.error("Failed to fetch due items", err));
 
         // Fetch StatsSummary
-        fetch('http://localhost:8080/api/stats/summary')
+        fetch(api('/stats/summary'))
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch');
                 return res.json();
@@ -39,7 +40,7 @@ export default function Dashboard() {
             .catch(err => console.error("Failed to fetch stats", err));
 
         // Fetch Topic Progress
-        fetch('http://localhost:8080/api/progress/summary?userId=1')
+        fetch(api('/progress/summary?userId=1'))
             .then(res => res.json())
             .then(data => setTopicProgress(data))
             .catch(err => console.error("Failed to fetch progress", err));
@@ -232,4 +233,6 @@ export default function Dashboard() {
         </div>
     );
 }
+
+
 

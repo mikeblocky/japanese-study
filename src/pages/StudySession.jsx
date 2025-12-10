@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,16 +33,16 @@ export default function StudySession() {
         if (topicId === 'test') return;
 
         setElapsedSeconds(0);
-        fetch(`http://localhost:8080/api/sessions/start?userId=1`)
+        fetch(`${API_BASE}/api/sessions/start?userId=1`)
             .then(res => res.json())
             .then(data => setSessionId(data.id))
             .catch(err => console.error("Failed to start session:", err));
 
         const fetchUrl = topicId === 'review'
-            ? `http://localhost:8080/api/sessions/due?userId=1`
+            ? `${API_BASE}/api/sessions/due?userId=1`
             : topicId === 'daily'
-                ? `http://localhost:8080/api/daily/cards?userId=1&count=30`
-                : `http://localhost:8080/api/data/topics/${topicId}/items`;
+                ? `${API_BASE}/api/daily/cards?userId=1&count=30`
+                : `${API_BASE}/api/data/topics/${topicId}/items`;
 
         fetch(fetchUrl)
             .then(res => res.json())
@@ -130,7 +131,7 @@ export default function StudySession() {
             setTypingInput('');
 
             if (sessionId && items[currentIndex]) {
-                fetch(`http://localhost:8080/api/sessions/${sessionId}/log`, {
+                fetch(`${API_BASE}/api/sessions/${sessionId}/log`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ itemId: items[currentIndex].id, correct })
@@ -147,7 +148,7 @@ export default function StudySession() {
                 setCurrentIndex(prev => prev + 1);
             } else {
                 if (sessionId) {
-                    fetch(`http://localhost:8080/api/sessions/${sessionId}/end`, {
+                    fetch(`${API_BASE}/api/sessions/${sessionId}/end`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ durationSeconds: elapsedSeconds })
@@ -168,7 +169,7 @@ export default function StudySession() {
 
     const handleTestStart = async (config) => {
         try {
-            const res = await fetch('http://localhost:8080/api/sessions/test/generate', {
+            const res = await fetch('`${API_BASE}/api/sessions/test/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ topicIds: config.topicIds || [], count: config.count })
@@ -179,7 +180,7 @@ export default function StudySession() {
             if (config.timeLimit > 0) setTimeLeft(config.timeLimit);
             setShowTestSetup(false);
 
-            const sessionRes = await fetch(`http://localhost:8080/api/sessions/start?userId=1`);
+            const sessionRes = await fetch(`${API_BASE}/api/sessions/start?userId=1`);
             const sessionData = await sessionRes.json();
             setSessionId(sessionData.id);
         } catch (err) {
@@ -551,3 +552,6 @@ export default function StudySession() {
         </div>
     );
 }
+
+
+

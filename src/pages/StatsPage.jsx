@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Clock, Calendar, TrendingUp, Award, BarChart3, Activity, BookOpen } from 'lucide-react';
@@ -14,8 +15,8 @@ const StatsPage = () => {
         const fetchData = async () => {
             try {
                 const [statsRes, masteryRes] = await Promise.all([
-                    fetch('http://localhost:8080/api/sessions/stats?userId=1'),
-                    fetch('http://localhost:8080/api/sessions/mastery?userId=1')
+                    fetch('`${API_BASE}/api/sessions/stats?userId=1'),
+                    fetch('`${API_BASE}/api/sessions/mastery?userId=1')
                 ]);
 
                 if (statsRes.ok) {
@@ -261,4 +262,7 @@ const StatsPage = () => {
 };
 
 export default StatsPage;
+
+
+
 

@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,7 +25,7 @@ export default function TestSetup({ onStart, onCancel }) {
 
     // Fetch Topics on Mount
     useState(() => {
-        fetch('http://localhost:8080/api/data/courses')
+        fetch('`${API_BASE}/api/data/courses')
             .then(res => res.json())
             .then(data => {
                 const allTopics = data.flatMap(course =>
@@ -382,3 +383,6 @@ export default function TestSetup({ onStart, onCancel }) {
         document.body
     );
 }
+
+
+

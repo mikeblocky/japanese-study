@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Users, UserPlus, Trash2, Key, RefreshCw, Upload, X,
@@ -36,7 +37,7 @@ export default function AdminUsers() {
             ...(currentUser?.id ? { 'X-User-Id': currentUser.id.toString() } : {}),
             ...options.headers
         };
-        return fetch(`http://localhost:8080/api${path}`, { ...options, headers });
+        return fetch(`${API_BASE}/api${path}`, { ...options, headers });
     }, [currentUser]);
 
     const fetchUsers = useCallback(async () => {
@@ -437,3 +438,6 @@ export default function AdminUsers() {
         </div>
     );
 }
+
+
+

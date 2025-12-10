@@ -73,3 +73,5 @@ export default function StreakBadge({ streak, className }) {
         </motion.div>
     );
 }
+
+

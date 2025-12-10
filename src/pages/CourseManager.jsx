@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Trash2, Layers, Search, FileText, Upload, MoreHorizontal, ChevronRight, User as UserIcon, Save, Image as ImageIcon, Music, HelpCircle, X, Download, Shield } from 'lucide-react';
@@ -48,7 +49,7 @@ const CourseManager = () => {
     const fetchCourses = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8080/api/data/courses');
+            const res = await fetch('`${API_BASE}/api/data/courses');
             const data = await res.json();
             setCourses(data);
             if (selectedCourse) {
@@ -73,7 +74,7 @@ const CourseManager = () => {
 
     const fetchItemTypes = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/data/types');
+            const res = await fetch('`${API_BASE}/api/data/types');
             if (res.ok) {
                 const data = await res.json();
                 setItemTypes(data);
@@ -84,7 +85,7 @@ const CourseManager = () => {
 
     const fetchItemsForTopic = async (topicId) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/data/topics/${topicId}/items`);
+            const res = await fetch(`${API_BASE}/api/data/topics/${topicId}/items`);
             if (res.ok) setItems(await res.json());
         } catch (err) { console.error(err); }
     }
@@ -105,7 +106,7 @@ const CourseManager = () => {
     const handleCreateCourse = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:8080/api/data/courses', {
+            const res = await fetch('`${API_BASE}/api/data/courses', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newCourseTitle, description: newCourseDesc })
@@ -118,7 +119,7 @@ const CourseManager = () => {
         e.stopPropagation();
         if (!window.confirm("Delete course?")) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/data/courses/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE}/api/data/courses/${id}`, { method: 'DELETE' });
             if (res.ok) { if (selectedCourse?.id === id) { setSelectedCourse(null); setSelectedTopic(null); } fetchCourses(); }
         } catch (err) { console.error(err); }
     };
@@ -126,7 +127,7 @@ const CourseManager = () => {
     const handleCreateTopic = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:8080/api/data/topics', {
+            const res = await fetch('`${API_BASE}/api/data/topics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newTopicTitle, course: { id: selectedCourse.id } })
@@ -138,7 +139,7 @@ const CourseManager = () => {
     const handleDeleteTopic = async (id) => {
         if (!window.confirm("Delete topic?")) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/data/topics/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE}/api/data/topics/${id}`, { method: 'DELETE' });
             if (res.ok) { if (selectedTopic?.id === id) setSelectedTopic(null); fetchCourses(); }
         } catch (err) { console.error(err); }
     };
@@ -147,7 +148,7 @@ const CourseManager = () => {
         if (e) e.preventDefault();
         if (!selectedTopic || !newItemPrimary) return;
         try {
-            const res = await fetch('http://localhost:8080/api/data/items', {
+            const res = await fetch('`${API_BASE}/api/data/items', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -173,7 +174,7 @@ const CourseManager = () => {
     const handleDeleteItem = async (id) => {
         if (!window.confirm("Delete item?")) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/data/items/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE}/api/data/items/${id}`, { method: 'DELETE' });
             if (res.ok) { fetchItemsForTopic(selectedTopic.id); fetchCourses(); }
         } catch (err) { console.error(err); }
     };
@@ -193,7 +194,7 @@ const CourseManager = () => {
         }).filter(item => item.primaryText);
 
         try {
-            const res = await fetch('http://localhost:8080/api/data/items/batch', {
+            const res = await fetch('`${API_BASE}/api/data/items/batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(items)
@@ -503,3 +504,6 @@ const CourseManager = () => {
 };
 
 export default CourseManager;
+
+
+

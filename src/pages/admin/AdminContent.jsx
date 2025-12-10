@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Database, BookOpen, Layers, FileText, Upload, Trash2,
@@ -8,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Content Page - Course and content management with Anki import
@@ -292,3 +293,6 @@ export default function AdminContent() {
         </div>
     );
 }
+
+
+

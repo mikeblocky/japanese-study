@@ -74,3 +74,5 @@ export function FuriganaAdvanced({ text, reading, className }) {
     // Future enhancement: Parse and split individual kanji/reading pairs
     return <Furigana text={text} reading={reading} className={className} />;
 }
+
+

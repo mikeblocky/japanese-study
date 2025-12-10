@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
     Activity, Users, Database, Server, RefreshCw, Trash2,
@@ -8,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // API helper
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Technical Control Panel - Manager/Admin interface
@@ -470,3 +471,6 @@ const LogsTab = ({ logs }) => (
 );
 
 export default ControlPanel;
+
+
+

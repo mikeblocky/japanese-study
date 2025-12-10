@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Circle, Calendar, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +16,7 @@ const GoalsPage = () => {
 
     const fetchGoals = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/goals');
+            const response = await fetch('`${API_BASE}/api/goals');
             if (response.ok) {
                 const data = await response.json();
                 setGoals(data);
@@ -32,7 +33,7 @@ const GoalsPage = () => {
         if (!newGoalTitle.trim()) return;
 
         try {
-            const response = await fetch('http://localhost:8080/api/goals', {
+            const response = await fetch('`${API_BASE}/api/goals', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -55,7 +56,7 @@ const GoalsPage = () => {
     const toggleGoal = async (id) => {
         setGoals(goals.map(g => g.id === id ? { ...g, isCompleted: !g.isCompleted } : g)); // Optimistic UI
         try {
-            await fetch(`http://localhost:8080/api/goals/${id}/toggle`, { method: 'PUT' });
+            await fetch(`${API_BASE}/api/goals/${id}/toggle`, { method: 'PUT' });
         } catch (error) {
             console.error("Failed to toggle goal", error);
             fetchGoals(); // Revert on error
@@ -65,7 +66,7 @@ const GoalsPage = () => {
     const deleteGoal = async (id) => {
         if (!window.confirm("Delete this goal?")) return;
         try {
-            const response = await fetch(`http://localhost:8080/api/goals/${id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE}/api/goals/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 setGoals(goals.filter(g => g.id !== id));
             }
@@ -231,4 +232,7 @@ const GoalsPage = () => {
 };
 
 export default GoalsPage;
+
+
+
 

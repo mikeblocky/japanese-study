@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Edit, Save, X, RotateCcw, ChevronDown, ChevronRight, MoreHorizontal, BookOpen, Layers, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,8 +34,8 @@ const WordConsole = () => {
             try {
                 setLoading(true);
                 const [coursesRes, masteryRes] = await Promise.all([
-                    fetch('http://localhost:8080/api/data/courses'),
-                    fetch('http://localhost:8080/api/sessions/mastery?userId=1')
+                    fetch('`${API_BASE}/api/data/courses'),
+                    fetch('`${API_BASE}/api/sessions/mastery?userId=1')
                 ]);
 
                 const coursesData = await coursesRes.json();
@@ -50,7 +51,7 @@ const WordConsole = () => {
                 for (const course of coursesData) {
                     for (const topic of (course.topics || [])) {
                         try {
-                            const itemsRes = await fetch(`http://localhost:8080/api/data/topics/${topic.id}/items`);
+                            const itemsRes = await fetch(`${API_BASE}/api/data/topics/${topic.id}/items`);
                             const items = await itemsRes.json();
                             items.forEach(item => {
                                 flattened.push({
@@ -152,7 +153,7 @@ const WordConsole = () => {
     const handleSave = async () => {
         if (!editingItem) return;
         try {
-            const res = await fetch(`http://localhost:8080/api/data/items/${editingItem.id}`, {
+            const res = await fetch(`${API_BASE}/api/data/items/${editingItem.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...editingItem, ...editForm })
@@ -440,3 +441,6 @@ const getStatusColor = (level) => {
 };
 
 export default WordConsole;
+
+
+

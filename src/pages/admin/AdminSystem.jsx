@@ -1,3 +1,4 @@
+import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Server, Cpu, HardDrive, Activity, Clock, Wifi, Shield, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -5,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `http://localhost:8080/api${path}`;
+const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin System Page - System information and health monitoring
@@ -163,3 +164,6 @@ export default function AdminSystem() {
         </div>
     );
 }
+
+
+

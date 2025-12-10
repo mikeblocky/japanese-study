@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function CourseList() {
     const [courses, setCourses] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:8080/api/data/courses')
+        fetch(api('/data/courses'))
             .then(res => res.json())
             .then(data => setCourses(data))
             .catch(err => console.error("Failed to fetch courses", err));
@@ -38,3 +39,5 @@ export default function CourseList() {
         </div>
     );
 }
+
+
