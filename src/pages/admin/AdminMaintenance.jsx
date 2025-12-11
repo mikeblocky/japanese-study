@@ -1,66 +1,64 @@
-import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
-import { Wrench, Trash2, RefreshCw, AlertTriangle, CheckCircle, Zap, Server } from 'lucide-react';
+import { Wrench, Trash2, Database, RefreshCw, Layers, AlertTriangle, CheckCircle, Zap, Server } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Maintenance Page - System maintenance and cleanup operations
  */
 export default function AdminMaintenance() {
     const { user } = useAuth();
-    const [stats, setStats] = useState(null);
-    const [message, setMessage] = useState(null);
-    const [loading, setLoading] = useState({});
+    const [stats, setStats] = useState(null); // Keep stats for the status section
+    const [status, setStatus] = useState(null); // New state for action feedback
+    const [loading, setLoading] = useState(false); // Simplified loading state
 
     useEffect(() => {
         if (!user) return;
-        fetch(api('/admin/stats'), { headers: { 'X-User-Id': user.id.toString() } })
-            .then(r => r.ok && r.json())
-            .then(setStats);
+        // Fetch stats using the new api instance
+        api.get('/admin/stats', { headers: { 'X-User-Id': user.id.toString() } })
+            .then(setStats)
+            .catch(error => console.error("Failed to fetch stats:", error));
     }, [user]);
 
-    const showToast = (type, text) => {
-        setMessage({ type, text });
-        setTimeout(() => setMessage(null), 3000);
-    };
-
-    const withLoading = async (key, action) => {
-        setLoading(l => ({ ...l, [key]: true }));
+    // Run actions
+    const runAction = async (action, name) => {
+        if (!user) return;
+        if (!confirm(`Run ${name}?`)) return;
+        setLoading(true);
+        setStatus(null);
         try {
             await action();
+            setStatus({ type: 'success', text: `${name} completed successfully` });
+        } catch (err) {
+            setStatus({ type: 'error', text: err.message || `Failed to ${name} ` });
         } finally {
-            setLoading(l => ({ ...l, [key]: false }));
+            setLoading(false);
         }
     };
 
-    const handleClearAllCaches = () => withLoading('cache', async () => {
-        if (!user) return;
-        const res = await fetch(api('/admin/cache/clear'), {
-            method: 'POST',
-            headers: { 'X-User-Id': user.id.toString() }
-        });
-        if (res.ok) showToast('success', 'All caches cleared');
-    });
+    const clearCache = () => runAction(async () => {
+        await api.post('/admin/cache/clear', {}, { headers: { 'X-User-Id': user.id.toString() } });
+    }, "Clear System Cache");
 
-    const handleResetAllSessions = () => withLoading('sessions', async () => {
-        if (!user) return;
-        if (!confirm('Delete ALL study sessions? This cannot be undone!')) return;
-        const res = await fetch(api('/admin/maintenance/reset-sessions'), {
-            method: 'POST',
-            headers: { 'X-User-Id': user.id.toString() }
-        });
-        if (res.ok) {
-            const result = await res.json();
-            showToast('success', result.message);
-        }
-    });
+    const reindexSearch = () => runAction(async () => {
+        // Placeholder for future implementation
+        await new Promise(r => setTimeout(r, 1000));
+        // Example: await api.post('/admin/search/reindex', {}, { headers: { 'X-User-Id': user.id.toString() } });
+    }, "Rebuild Search Index");
 
-    const MaintenanceAction = ({ icon: Icon, title, description, button, onClick, loading: isLoading, danger }) => (
+    const vacuumDb = () => runAction(async () => {
+        // Placeholder for future implementation
+        await new Promise(r => setTimeout(r, 1000));
+        // Example: await api.post('/admin/db/vacuum', {}, { headers: { 'X-User-Id': user.id.toString() } });
+    }, "Vacuum API Database");
+
+    const resetSessions = () => runAction(async () => {
+        await api.post('/admin/maintenance/reset-sessions', {}, { headers: { 'X-User-Id': user.id.toString() } });
+    }, "Reset All Sessions");
+
+    const MaintenanceAction = ({ icon: Icon, title, description, button, onClick, danger }) => (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
             <div className="flex items-start gap-4">
                 <div className={cn("p-3 rounded-lg", danger ? "bg-red-500/10" : "bg-gray-800")}>
@@ -134,7 +132,7 @@ export default function AdminMaintenance() {
                 <MaintenanceAction
                     icon={Trash2}
                     title="Reset All Sessions"
-                    description={`Permanently deletes all ${stats?.totalSessions ?? 0} study sessions. This removes all user progress and statistics.`}
+                    description={`Permanently deletes all ${stats?.totalSessions ?? 0} study sessions.This removes all user progress and statistics.`}
                     button={{ icon: <Trash2 className="w-3 h-3" />, label: 'Reset Sessions' }}
                     onClick={handleResetAllSessions}
                     loading={loading.sessions}

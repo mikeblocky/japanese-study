@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Users, UserPlus, Trash2, Key, RefreshCw, Upload, X,
@@ -31,14 +31,24 @@ export default function AdminUsers() {
     const changePasswordRef = useRef(null);
 
     // API Helper with headers
+    // API Helper using axios instance
     const apiCall = useCallback(async (path, options = {}) => {
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(currentUser?.id ? { 'X-User-Id': currentUser.id.toString() } : {}),
-            ...options.headers
-        };
-        return fetch(`${API_BASE}/api${path}`, { ...options, headers });
-    }, [currentUser]);
+        // Axios options
+        const config = { ...options };
+        if (config.body) {
+            config.data = JSON.parse(config.body); // Axios uses 'data', not 'body', and expects object not string if JSON
+            delete config.body;
+        }
+
+        // Handle method override if passed in options
+        const method = (config.method || 'GET').toLowerCase();
+
+        return api({
+            url: path,
+            method,
+            ...config
+        });
+    }, []);
 
     const fetchUsers = useCallback(async () => {
         // Don't refresh if user is interacting with a modal
@@ -46,7 +56,7 @@ export default function AdminUsers() {
 
         try {
             const res = await apiCall('/admin/users');
-            if (res.ok) setUsers(await res.json());
+            setUsers(res.data);
         } catch (err) {
             console.error('Failed to fetch users:', err);
         } finally {
@@ -85,19 +95,15 @@ export default function AdminUsers() {
         const role = newRoleRef.current?.value || 'STUDENT';
 
         try {
-            const res = await apiCall('/admin/users', {
+            await apiCall('/admin/users', {
                 method: 'POST',
-                body: JSON.stringify({ username, email, password, role })
+                data: { username, email, password, role }
             });
-            if (res.ok) {
-                showToast('success', 'User created');
-                setShowAddUser(false);
-                fetchUsers();
-            } else {
-                showToast('error', 'Failed to create user (Permission denied?)');
-            }
+            showToast('success', 'User created');
+            setShowAddUser(false);
+            fetchUsers();
         } catch (err) {
-            showToast('error', err.message);
+            showToast('error', err.response?.data?.message || 'Failed to create user');
         }
     };
 
@@ -113,14 +119,13 @@ export default function AdminUsers() {
 
             const res = await apiCall('/admin/users/bulk', {
                 method: 'POST',
-                body: JSON.stringify(usersData)
+                data: usersData
             });
-            if (res.ok) {
-                const result = await res.json();
-                showToast('success', `Created ${result.created} users`);
-                setShowBulkImport(false);
-                fetchUsers();
-            }
+
+            const result = res.data;
+            showToast('success', `Created ${result.created} users`);
+            setShowBulkImport(false);
+            fetchUsers();
         } catch (err) {
             showToast('error', err.message);
         }
@@ -134,16 +139,12 @@ export default function AdminUsers() {
             return;
         }
         try {
-            const res = await apiCall(`/admin/users/${showPasswordModal}/password`, {
+            await apiCall(`/admin/users/${showPasswordModal}/password`, {
                 method: 'PATCH',
-                body: JSON.stringify({ password })
+                data: { password }
             });
-            if (res.ok) {
-                showToast('success', 'Password updated');
-                setShowPasswordModal(null);
-            } else {
-                showToast('error', 'Failed (Permission denied?)');
-            }
+            showToast('success', 'Password updated');
+            setShowPasswordModal(null);
         } catch (err) {
             showToast('error', err.message);
         }
@@ -152,20 +153,16 @@ export default function AdminUsers() {
     // Update role
     const handleRoleChange = async (userId, newRole) => {
         try {
-            const res = await apiCall(`/admin/users/${userId}/role`, {
+            await apiCall(`/admin/users/${userId}/role`, {
                 method: 'PATCH',
-                body: JSON.stringify({ role: newRole })
+                data: { role: newRole }
             });
-            if (res.ok) {
-                showToast('success', 'Role updated');
-                // Force immediate refresh for specific row update
-                fetchUsers();
-            } else {
-                showToast('error', 'Failed (Permission denied?)');
-                fetchUsers(); // Revert UI
-            }
+            showToast('success', 'Role updated');
+            // Force immediate refresh for specific row update
+            fetchUsers();
         } catch (err) {
             showToast('error', err.message);
+            fetchUsers(); // Revert UI
         }
     };
 
@@ -173,13 +170,9 @@ export default function AdminUsers() {
     const handleDeleteUser = async (userId) => {
         if (!confirm('Permanently delete this user and all their data?')) return;
         try {
-            const res = await apiCall(`/admin/users/${userId}`, { method: 'DELETE' });
-            if (res.ok) {
-                showToast('success', 'User deleted');
-                fetchUsers();
-            } else {
-                showToast('error', 'Failed (Permission denied?)');
-            }
+            await apiCall(`/admin/users/${userId}`, { method: 'DELETE' });
+            showToast('success', 'User deleted');
+            fetchUsers();
         } catch (err) {
             showToast('error', err.message);
         }
@@ -189,11 +182,9 @@ export default function AdminUsers() {
     const handleResetProgress = async (userId) => {
         if (!confirm('Reset all study progress for this user? This cannot be undone.')) return;
         try {
-            const res = await apiCall(`/admin/users/${userId}/reset-progress`, { method: 'POST' });
-            if (res.ok) {
-                showToast('success', 'Progress reset');
-                fetchUsers();
-            }
+            await apiCall(`/admin/users/${userId}/reset-progress`, { method: 'POST' });
+            showToast('success', 'Progress reset');
+            fetchUsers();
         } catch (err) {
             showToast('error', err.message);
         }

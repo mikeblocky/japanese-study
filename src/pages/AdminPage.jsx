@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Users, Database, Server, RefreshCw, Trash2, Plus,
@@ -7,9 +7,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
-// API helper
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Page - Control Panel styled like other pages
@@ -31,14 +28,14 @@ export default function AdminPage() {
     const fetchData = useCallback(async () => {
         try {
             const [statsRes, usersRes, healthRes] = await Promise.all([
-                fetch(api('/admin/stats')),
-                fetch(api('/admin/users')),
-                fetch(api('/admin/health'))
+                api.get('/admin/stats'),
+                api.get('/admin/users'),
+                api.get('/admin/health')
             ]);
 
-            if (statsRes.ok) setStats(await statsRes.json());
-            if (usersRes.ok) setUsers(await usersRes.json());
-            if (healthRes.ok) setHealth(await healthRes.json());
+            setStats(statsRes.data);
+            setUsers(usersRes.data);
+            setHealth(healthRes.data);
         } catch (err) {
             console.error('Failed to fetch data:', err);
         } finally {
@@ -62,67 +59,47 @@ export default function AdminPage() {
     const handleCreateUser = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(api('/admin/users'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUser)
-            });
-            if (res.ok) {
-                showMessage('success', 'User created successfully');
-                setNewUser({ username: '', email: '', role: 'STUDENT' });
-                setShowAddUser(false);
-                fetchData();
-            } else {
-                showMessage('error', 'Failed to create user');
-            }
+            await api.post('/admin/users', newUser);
+            showMessage('success', 'User created successfully');
+            setNewUser({ username: '', email: '', role: 'STUDENT' });
+            setShowAddUser(false);
+            fetchData();
         } catch (err) {
-            showMessage('error', err.message);
+            showMessage('error', err.response?.data?.message || 'Failed to create user');
         }
     };
 
     const handleRoleChange = async (userId, newRole) => {
         try {
-            const res = await fetch(api(`/admin/users/${userId}/role`), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole })
-            });
-            if (res.ok) {
-                showMessage('success', 'Role updated');
-                fetchData();
-            }
+            await api.patch(`/admin/users/${userId}/role`, { role: newRole });
+            showMessage('success', 'Role updated');
+            fetchData();
         } catch (err) {
-            showMessage('error', err.message);
+            showMessage('error', err.response?.data?.message || 'Failed to update role');
         }
     };
 
     const handleDeleteUser = async (userId) => {
         if (!confirm('Delete this user?')) return;
         try {
-            const res = await fetch(api(`/admin/users/${userId}`), { method: 'DELETE' });
-            if (res.ok) {
-                showMessage('success', 'User deleted');
-                fetchData();
-            }
+            await api.delete(`/admin/users/${userId}`);
+            showMessage('success', 'User deleted');
+            fetchData();
         } catch (err) {
-            showMessage('error', err.message);
+            showMessage('error', err.response?.data?.message || 'Failed to delete user');
         }
     };
 
     // Export data
     const handleExport = async () => {
         try {
-            const res = await fetch(api('/admin/export'));
-            if (res.ok) {
-                const data = await res.json();
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                showMessage('success', 'Data exported');
-            }
+            const res = await api.get('/admin/export', { responseType: 'blob' });
+            const url = URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            showMessage('success', 'Data exported');
         } catch (err) {
             showMessage('error', err.message);
         }
@@ -136,18 +113,11 @@ export default function AdminPage() {
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                const res = await fetch(api('/admin/import'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    showMessage('success', result.message);
-                    fetchData();
-                }
+                await api.post('/admin/import', data);
+                showMessage('success', 'Import successful');
+                fetchData();
             } catch (err) {
-                showMessage('error', 'Invalid JSON file');
+                showMessage('error', 'Invalid JSON file or import failed');
             }
         };
         reader.readAsText(file);
@@ -156,11 +126,9 @@ export default function AdminPage() {
     // Cache clear
     const handleClearCache = async () => {
         try {
-            const res = await fetch(api('/admin/cache/clear'), { method: 'POST' });
-            if (res.ok) {
-                showMessage('success', 'Caches cleared');
-                fetchData();
-            }
+            await api.post('/admin/cache/clear');
+            showMessage('success', 'Caches cleared');
+            fetchData();
         } catch (err) {
             showMessage('error', err.message);
         }

@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -13,10 +13,9 @@ export default function CourseDetail() {
 
     useEffect(() => {
         // Fetch topics
-        fetch(`${API_BASE}/api/data/courses/${courseId}/topics`)
-            .then(res => res.json())
-            .then(data => {
-                const sorted = data.sort((a, b) => a.orderIndex - b.orderIndex);
+        api.get(`/courses/${courseId}/topics`)
+            .then(res => {
+                const sorted = res.data.sort((a, b) => a.orderIndex - b.orderIndex);
                 setTopics(sorted);
                 setLoading(false);
             })
@@ -26,12 +25,11 @@ export default function CourseDetail() {
             });
 
         // Fetch progress for all topics
-        fetch(`${API_BASE}/api/progress/summary?userId=1`)
-            .then(res => res.json())
-            .then(data => {
+        api.get('/progress/summary?userId=1')
+            .then(res => {
                 // Convert array to map for easy lookup
                 const progressMap = {};
-                data.forEach(p => {
+                res.data.forEach(p => {
                     progressMap[p.topicId] = p.percentage;
                 });
                 setTopicProgress(progressMap);

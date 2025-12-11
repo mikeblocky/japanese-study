@@ -1,12 +1,9 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Database, HardDrive, Download, Upload, Trash2, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
 import { useAuth } from '@/context/AuthContext';
-
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Database Page - Database stats, backup, and data operations
@@ -19,15 +16,13 @@ export default function AdminDatabase() {
 
     const fetchData = useCallback(async () => {
         if (!user) return;
-        const headers = { 'X-User-Id': user.id.toString() };
-
         try {
             const [statsRes, backupRes] = await Promise.all([
-                fetch(api('/admin/database/stats'), { headers }),
-                fetch(api('/admin/backup/summary'), { headers })
+                api.get('/admin/database/stats'),
+                api.get('/admin/backup/summary')
             ]);
-            if (statsRes.ok) setStats(await statsRes.json());
-            if (backupRes.ok) setBackup(await backupRes.json());
+            setStats(statsRes.data);
+            setBackup(backupRes.data);
         } catch (err) {
             console.error('Failed to fetch:', err);
         }
@@ -49,21 +44,13 @@ export default function AdminDatabase() {
     const handleExport = async () => {
         if (!user) return;
         try {
-            const res = await fetch(api('/admin/export'), {
-                headers: { 'X-User-Id': user.id.toString() }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                showToast('success', 'Database exported successfully');
-            } else {
-                showToast('error', 'Export failed');
-            }
+            const res = await api.get('/admin/export', { responseType: 'blob' }); // Important: responseType blob
+            const url = URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            showToast('success', 'Database exported successfully');
         } catch (err) {
             showToast('error', err.message);
         }
@@ -76,23 +63,11 @@ export default function AdminDatabase() {
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                const res = await fetch(api('/admin/import'), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-Id': user.id.toString()
-                    },
-                    body: JSON.stringify(data)
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    showToast('success', result.message);
-                    fetchData();
-                } else {
-                    showToast('error', 'Import failed');
-                }
+                await api.post('/admin/import', data);
+                showToast('success', 'Import successful');
+                fetchData();
             } catch (err) {
-                showToast('error', 'Invalid JSON file');
+                showToast('error', err.response?.data?.message || 'Import failed or invalid JSON');
             }
         };
         reader.readAsText(file);

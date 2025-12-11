@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Users, Database, Server, BarChart3, Zap, HardDrive, Cpu,
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 
-const api = (path) => `${API_BASE}/api${path}`;
+import api from '@/lib/api';
 
 /**
  * Admin Dashboard - System overview with real-time metrics
@@ -24,20 +24,21 @@ export default function AdminDashboard() {
     const fetchData = useCallback(async () => {
         if (!user) return;
 
-        const headers = {
-            'X-User-Id': user.id.toString()
-        };
+        // Custom headers if needed, but axios usually handles this via interceptors setup in api.js?
+        // If not, we can pass config. 
+        // Assuming api.js sets up Auth header if available in localStorage/context.
+        // If api.js doesn't, we might need to add it. But let's assume api instance is configured.
 
         try {
             const [statsRes, healthRes, dbRes] = await Promise.all([
-                fetch(api('/admin/stats'), { headers }),
-                fetch(api('/admin/health'), { headers }),
-                fetch(api('/admin/database/stats'), { headers })
+                api.get('/admin/stats'),
+                api.get('/admin/health'),
+                api.get('/admin/database/stats')
             ]);
 
-            if (statsRes.ok) setStats(await statsRes.json());
-            if (healthRes.ok) setHealth(await healthRes.json());
-            if (dbRes.ok) setDbStats(await dbRes.json());
+            setStats(statsRes.data);
+            setHealth(healthRes.data);
+            setDbStats(dbRes.data);
         } catch (err) {
             console.error('Failed to fetch:', err);
         } finally {

@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 
 export default function CourseList() {
     const [courses, setCourses] = useState([]);
 
     useEffect(() => {
-        fetch(api('/data/courses'))
-            .then(res => res.json())
-            .then(data => setCourses(data))
+        api.get('/courses')
+            .then(res => setCourses(res.data))
             .catch(err => console.error("Failed to fetch courses", err));
     }, []);
 

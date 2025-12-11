@@ -1,220 +1,98 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase';
-import {
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createContext, useContext, useEffect, useState } from 'react';
+import api from '../lib/api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export function useAuth() {
+    return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Get user profile from Firestore (with timeout to prevent hanging)
-    const getUserProfile = async (uid, email) => {
-        try {
-            const docRef = doc(db, 'users', uid);
-            // Add timeout to prevent hanging on offline
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Firestore timeout')), 3000)
-            );
-            const snapshot = await Promise.race([getDoc(docRef), timeoutPromise]);
-            return snapshot.exists() ? snapshot.data() : null;
-        } catch (err) {
-            console.warn("Could not get user profile:", err.message);
-
-            // FALLBACK TO SQL BACKEND
-            if (email) {
-                try {
-                    console.log('Falling back to SQL Backend for Role...');
-                    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-                    const res = await fetch(`${API_BASE}/api/users/check-role?email=${email}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        console.log('Got Role from SQL Backend:', data.role);
-                        return { role: data.role };
-                    }
-                } catch (apiErr) {
-                    console.error('SQL Fallback Failed:', apiErr);
-                }
-            }
-            return null;
-        }
-    };
-
-    // Create/update user profile in Firestore
-    const createUserProfile = async (uid, data) => {
-        try {
-            const docRef = doc(db, 'users', uid);
-            await setDoc(docRef, {
-                ...data,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            }, { merge: true });
-        } catch (err) {
-            console.warn("Could not save user profile:", err.message);
-        }
-    };
-
-    // Handle redirect result (for Google Sign-In profile creation)
     useEffect(() => {
-        getRedirectResult(auth).then(async (result) => {
-            if (result?.user) {
-                console.log('Redirect result received, user:', result.user.email);
-                const profile = await getUserProfile(result.user.uid);
-                if (!profile) {
-                    await createUserProfile(result.user.uid, {
-                        username: result.user.displayName || result.user.email?.split('@')[0],
-                        email: result.user.email,
-                        role: 'STUDENT'
-                    });
-                }
-            }
-        }).catch((err) => {
-            console.warn('Redirect result error:', err.message);
-        });
+        // Check local storage for user
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+        setLoading(false);
     }, []);
 
-    // Listen for auth state changes - this is the main auth state handler
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            console.log('Auth state changed:', firebaseUser?.email || 'null');
-            if (firebaseUser) {
-                // Set user immediately from Firebase Auth (no waiting)
-                const initialUser = {
-                    id: firebaseUser.uid,
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    username: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
-                    role: 'STUDENT'
-                };
-                console.log('Setting user:', initialUser.email);
-                setUser(initialUser);
-                setLoading(false);
-
-                // Load Firestore profile in background (non-blocking)
-                getUserProfile(firebaseUser.uid, firebaseUser.email)
-                    .then(profile => {
-                        if (profile) {
-                            console.log('Got Firestore profile, updating role:', profile.role);
-                            setUser(prev => ({ ...prev, ...profile }));
-                        }
-                    })
-                    .catch(err => console.warn('Firestore profile failed:', err.message));
-            } else {
-                console.log('No user');
-                setUser(null);
-                setLoading(false);
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    // Email/Password Login
-    const login = async (email, password) => {
+    const login = async (username, password) => {
         try {
-            const result = await signInWithEmailAndPassword(auth, email, password);
-            return { success: true, user: result.user };
-        } catch (err) {
-            console.error("Login error:", err);
-            let message = 'Login failed';
-            if (err.code === 'auth/user-not-found') message = 'User not found';
-            if (err.code === 'auth/wrong-password') message = 'Incorrect password';
-            if (err.code === 'auth/invalid-email') message = 'Invalid email address';
-            if (err.code === 'auth/invalid-credential') message = 'Invalid email or password';
+            const response = await api.post('/auth/login', { username, password });
+            const userData = response.data;
+
+            // Map backend response to frontend user object
+            // Backend: { token, id, username, roles }
+            // Frontend expects role to be a string or check role logic
+            const userObj = {
+                uid: userData.id,
+                email: userData.username, // Using username as email for display if needed, or update backend to return email
+                displayName: userData.username,
+                accessToken: userData.accessToken,
+                role: userData.roles && userData.roles.length > 0 ? userData.roles[0].replace('ROLE_', '') : 'USER'
+            };
+
+            localStorage.setItem('user', JSON.stringify(userObj));
+            setUser(userObj);
+            return { success: true, user: userObj };
+        } catch (error) {
+            console.error("Login error", error);
+            const message = error.response?.data?.message || error.message || 'Login failed';
             return { success: false, message };
         }
     };
 
-    // Email/Password Signup
-    const signup = async (username, email, password) => {
+    const signup = async (username, password) => {
         try {
-            const result = await createUserWithEmailAndPassword(auth, email, password);
-            // Create user profile in Firestore
-            await createUserProfile(result.user.uid, {
-                username,
-                email,
-                role: 'STUDENT'
+            await api.post('/auth/register', {
+                username: username,
+                password: password
             });
-            return { success: true, user: result.user };
-        } catch (err) {
-            console.error("Signup error:", err);
-            let message = 'Signup failed';
-            if (err.code === 'auth/email-already-in-use') message = 'Email already in use';
-            if (err.code === 'auth/weak-password') message = 'Password should be at least 6 characters';
-            if (err.code === 'auth/invalid-email') message = 'Invalid email address';
+            return { success: true, message: 'Account created successfully! Please log in.' };
+        } catch (error) {
+            console.error("Signup error", error);
+            const message = error.response?.data?.message || error.message || 'Signup failed';
             return { success: false, message };
         }
     };
 
-    // Google Sign-In (using redirect to avoid COOP issues)
-    const loginWithGoogle = async () => {
-        try {
-            const provider = new GoogleAuthProvider();
-            await signInWithRedirect(auth, provider);
-            return { success: true };
-        } catch (err) {
-            console.error("Google login error:", err);
-            return { success: false, message: err.message || 'Google login failed' };
-        }
+    const logout = () => {
+        localStorage.removeItem('user');
+        setUser(null);
     };
 
-    // Logout
-    const logout = async () => {
+    const updateProfile = async (userId, data) => {
         try {
-            await signOut(auth);
-            setUser(null);
-            return { success: true };
-        } catch (err) {
-            return { success: false, message: err.message };
-        }
-    };
-
-    // Update profile
-    const updateProfile = async (updates) => {
-        if (!user) return { success: false, message: 'Not logged in' };
-        try {
-            await createUserProfile(user.uid, updates);
-            setUser(prev => ({ ...prev, ...updates }));
-            return { success: true };
-        } catch (err) {
-            return { success: false, message: err.message };
+            const res = await api.put(`/users/${userId}`, data);
+            if (res.status === 200) {
+                const updatedUser = { ...user, ...data };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+                return { success: true };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error("Update profile failed", error);
+            return { success: false, error };
         }
     };
 
     const value = {
         user,
-        loading,
         login,
         signup,
         logout,
-        loginWithGoogle,
-        updateProfile
+        updateProfile,
+        loading
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {children}
+            {!loading && children}
         </AuthContext.Provider>
     );
-};
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-};
-
-export default AuthContext;
-
-
+}

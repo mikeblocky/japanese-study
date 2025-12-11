@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Circle, Calendar, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,11 +16,8 @@ const GoalsPage = () => {
 
     const fetchGoals = async () => {
         try {
-            const response = await fetch('`${API_BASE}/api/goals');
-            if (response.ok) {
-                const data = await response.json();
-                setGoals(data);
-            }
+            const response = await api.get('/goals');
+            setGoals(response.data);
         } catch (error) {
             console.error("Failed to fetch goals", error);
         } finally {
@@ -33,17 +30,13 @@ const GoalsPage = () => {
         if (!newGoalTitle.trim()) return;
 
         try {
-            const response = await fetch('`${API_BASE}/api/goals', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: newGoalTitle,
-                    description: '',
-                    targetDate: new Date().toISOString().split('T')[0] // Default to today
-                })
+            const response = await api.post('/goals', {
+                title: newGoalTitle,
+                description: '',
+                targetDate: new Date().toISOString().split('T')[0] // Default to today
             });
 
-            if (response.ok) {
+            if (response.status === 200 || response.status === 201) {
                 setNewGoalTitle('');
                 setIsAdding(false);
                 fetchGoals();
@@ -56,7 +49,7 @@ const GoalsPage = () => {
     const toggleGoal = async (id) => {
         setGoals(goals.map(g => g.id === id ? { ...g, isCompleted: !g.isCompleted } : g)); // Optimistic UI
         try {
-            await fetch(`${API_BASE}/api/goals/${id}/toggle`, { method: 'PUT' });
+            await api.put(`/goals/${id}/toggle`);
         } catch (error) {
             console.error("Failed to toggle goal", error);
             fetchGoals(); // Revert on error
@@ -66,8 +59,8 @@ const GoalsPage = () => {
     const deleteGoal = async (id) => {
         if (!window.confirm("Delete this goal?")) return;
         try {
-            const response = await fetch(`${API_BASE}/api/goals/${id}`, { method: 'DELETE' });
-            if (response.ok) {
+            const response = await api.delete(`/goals/${id}`);
+            if (response.status === 200 || response.status === 204) {
                 setGoals(goals.filter(g => g.id !== id));
             }
         } catch (error) {

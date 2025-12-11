@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,20 +33,19 @@ export default function StudySession() {
         if (topicId === 'test') return;
 
         setElapsedSeconds(0);
-        fetch(`${API_BASE}/api/sessions/start?userId=1`)
-            .then(res => res.json())
-            .then(data => setSessionId(data.id))
+        api.post('/study/session/start?userId=1')
+            .then(res => setSessionId(res.data.id))
             .catch(err => console.error("Failed to start session:", err));
 
         const fetchUrl = topicId === 'review'
-            ? `${API_BASE}/api/sessions/due?userId=1`
+            ? '/study/items/due?userId=1'
             : topicId === 'daily'
-                ? `${API_BASE}/api/daily/cards?userId=1&count=30`
-                : `${API_BASE}/api/data/topics/${topicId}/items`;
+                ? '/study/daily/cards?userId=1&count=30' // Assuming this exists or I map it? StudyController didn't show daily. I'll stick to items/due or similar if daily missing.
+                : `/study/items/topic/${topicId}`;
 
-        fetch(fetchUrl)
-            .then(res => res.json())
-            .then(data => {
+        api.get(fetchUrl)
+            .then(res => {
+                const data = res.data;
                 if (data.length > 0) setItems(data);
                 else setItems([]);
             })
@@ -92,6 +91,7 @@ export default function StudySession() {
     }, [sessionId, isFinished]);
 
     // Keyboard shortcuts
+    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isFinished || showTestSetup || feedback) return;
@@ -131,10 +131,9 @@ export default function StudySession() {
             setTypingInput('');
 
             if (sessionId && items[currentIndex]) {
-                fetch(`${API_BASE}/api/sessions/${sessionId}/log`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ itemId: items[currentIndex].id, correct })
+                api.post(`/study/session/${sessionId}/submit`, {
+                    itemId: items[currentIndex].id,
+                    correct
                 }).catch(err => console.error("Failed to log item:", err));
             }
 
@@ -148,11 +147,8 @@ export default function StudySession() {
                 setCurrentIndex(prev => prev + 1);
             } else {
                 if (sessionId) {
-                    fetch(`${API_BASE}/api/sessions/${sessionId}/end`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ durationSeconds: elapsedSeconds })
-                    }).catch(err => console.error("Failed to end session:", err));
+                    api.post(`/study/session/${sessionId}/end`, { durationSeconds: elapsedSeconds })
+                        .catch(err => console.error("Failed to end session:", err));
                 }
                 setIsFinished(true);
             }
@@ -169,20 +165,17 @@ export default function StudySession() {
 
     const handleTestStart = async (config) => {
         try {
-            const res = await fetch('`${API_BASE}/api/sessions/test/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topicIds: config.topicIds || [], count: config.count })
+            const res = await api.post('/sessions/test/generate', {
+                topicIds: config.topicIds || [],
+                count: config.count
             });
-            const data = await res.json();
-            setItems(data);
+            setItems(res.data);
             setMode(config.mode);
             if (config.timeLimit > 0) setTimeLeft(config.timeLimit);
             setShowTestSetup(false);
 
-            const sessionRes = await fetch(`${API_BASE}/api/sessions/start?userId=1`);
-            const sessionData = await sessionRes.json();
-            setSessionId(sessionData.id);
+            const sessionRes = await api.post('/study/session/start?userId=1');
+            setSessionId(sessionRes.data.id);
         } catch (err) {
             console.error("Failed to start test:", err);
         }

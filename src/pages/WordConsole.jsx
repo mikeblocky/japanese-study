@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Edit, Save, X, RotateCcw, ChevronDown, ChevronRight, MoreHorizontal, BookOpen, Layers, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,18 +27,19 @@ const WordConsole = () => {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
+
     // --- Data Fetching ---
     useEffect(() => {
         const fetchAll = async () => {
             try {
                 setLoading(true);
                 const [coursesRes, masteryRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/data/courses`),
-                    fetch(`${API_BASE}/api/sessions/mastery?userId=1`)
+                    api.get('/courses'),
+                    api.get('/sessions/mastery?userId=1')
                 ]);
 
-                const coursesData = await coursesRes.json();
-                const masteryJson = await masteryRes.json();
+                const coursesData = coursesRes.data;
+                const masteryJson = masteryRes.data;
 
                 // Mastery Map
                 const map = {};
@@ -50,8 +51,8 @@ const WordConsole = () => {
                 for (const course of coursesData) {
                     for (const topic of (course.topics || [])) {
                         try {
-                            const itemsRes = await fetch(`${API_BASE}/api/data/topics/${topic.id}/items`);
-                            const items = await itemsRes.json();
+                            const itemsRes = await api.get(`/topics/${topic.id}/items`);
+                            const items = itemsRes.data;
                             items.forEach(item => {
                                 flattened.push({
                                     ...item,
@@ -118,9 +119,6 @@ const WordConsole = () => {
 
     // --- Handlers ---
     const toggleCourse = (courseId) => {
-        // If clicking same course, toggle expand. If different, select it and expand.
-        // Actually, let's keep selection and expansion separate for better UX.
-        // Expansion logic:
         setExpandedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
     };
 
@@ -152,16 +150,10 @@ const WordConsole = () => {
     const handleSave = async () => {
         if (!editingItem) return;
         try {
-            const res = await fetch(`${API_BASE}/api/data/items/${editingItem.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...editingItem, ...editForm })
-            });
-            if (res.ok) {
-                const updated = await res.json();
-                setAllItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...editForm } : i));
-                setEditingItem(null);
-            }
+            const res = await api.put(`/items/${editingItem.id}`, { ...editingItem, ...editForm });
+            const updated = res.data;
+            setAllItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...editForm } : i));
+            setEditingItem(null);
         } catch (err) {
             console.error(err);
         }
@@ -440,6 +432,3 @@ const getStatusColor = (level) => {
 };
 
 export default WordConsole;
-
-
-

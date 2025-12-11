@@ -1,15 +1,12 @@
-import API_BASE from '@/lib/api';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Database, BookOpen, Layers, FileText, Upload, Trash2,
-    Plus, AlertTriangle, CheckCircle, X, ChevronRight
+    Plus, AlertTriangle, CheckCircle, X, ChevronRight, Edit, Trash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Content Page - Course and content management with Anki import
@@ -20,47 +17,64 @@ export default function AdminContent() {
     const [message, setMessage] = useState(null);
     const [showAnkiImport, setShowAnkiImport] = useState(false);
     const [loading, setLoading] = useState({});
+    const [editing, setEditing] = useState(null);
 
-    // Anki import form with refs to prevent flickering
+    // Anki import form refs
     const courseNameRef = useRef(null);
     const descriptionRef = useRef(null);
     const ankiDataRef = useRef(null);
 
-    const fetchCourses = useCallback(async () => {
+    useEffect(() => {
+        loadCourses();
+    }, []);
+
+    const loadCourses = async () => {
         try {
-            // Include header for consistency, though backend might not strictly enforce it yet for this endpoint
-            const headers = user ? { 'X-User-Id': user.id.toString() } : {};
-            const res = await fetch(api('/admin/courses'), { headers });
-            if (res.ok) setCourses(await res.json());
+            const res = await api.get('/admin/courses');
+            setCourses(res.data);
         } catch (err) {
             console.error('Failed to fetch courses:', err);
+            showToast('error', 'Failed to load courses');
         }
-    }, [user]);
-
-    useEffect(() => {
-        fetchCourses();
-    }, [fetchCourses]);
+    };
 
     const showToast = (type, text) => {
         setMessage({ type, text });
         setTimeout(() => setMessage(null), 4000);
     };
 
-    const handleDeleteCourse = async (id) => {
+    const handleSave = async (course) => {
+        if (!user) return;
+        setLoading(l => ({ ...l, [`save-${course.id || 'new'}`]: true }));
+        try {
+            if (course.id) {
+                await api.patch(`/admin/courses/${course.id}`, course);
+                showToast('success', 'Course updated');
+            } else {
+                await api.post('/admin/courses', course);
+                showToast('success', 'Course created');
+            }
+            setEditing(null);
+            loadCourses();
+        } catch (err) {
+            console.error(err);
+            showToast('error', err.response?.data?.message || err.message);
+        } finally {
+            setLoading(l => ({ ...l, [`save-${course.id || 'new'}`]: false }));
+        }
+    };
+
+    const handleDelete = async (id) => {
         if (!user) return;
         if (!confirm('Delete this course and ALL its topics and items? This cannot be undone!')) return;
         setLoading(l => ({ ...l, [`del-${id}`]: true }));
         try {
-            const res = await fetch(api(`/admin/courses/${id}`), {
-                method: 'DELETE',
-                headers: { 'X-User-Id': user.id.toString() }
-            });
-            if (res.ok) {
-                showToast('success', 'Course deleted');
-                fetchCourses();
-            }
+            await api.delete(`/admin/courses/${id}`);
+            showToast('success', 'Course deleted');
+            loadCourses();
         } catch (err) {
-            showToast('error', err.message);
+            console.error(err);
+            showToast('error', err.response?.data?.message || err.message);
         } finally {
             setLoading(l => ({ ...l, [`del-${id}`]: false }));
         }
@@ -80,11 +94,10 @@ export default function AdminContent() {
         setLoading(l => ({ ...l, anki: true }));
 
         try {
-            // Parse Anki data: format is "front\tback" or "front\treading\tback" per line
+            // Parse Anki data
             const lines = ankiData.trim().split('\n').filter(l => l.trim());
             const items = lines.map((line, idx) => {
                 const parts = line.split('\t');
-                // Support: word, meaning OR word, reading, meaning
                 if (parts.length >= 3) {
                     return { front: parts[0], reading: parts[1], back: parts[2], topic: `Lesson ${Math.floor(idx / 20) + 1}` };
                 } else if (parts.length >= 2) {
@@ -93,29 +106,16 @@ export default function AdminContent() {
                 return { front: parts[0] || '', back: '', topic: 'Default' };
             });
 
-            const res = await fetch(api('/admin/anki/import'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Id': user.id.toString()
-                },
-                body: JSON.stringify({ courseName, description, items })
-            });
+            const res = await api.post('/admin/anki/import', { courseName, description, items });
 
-            if (res.ok) {
-                const result = await res.json();
-                showToast('success', `Created course "${result.courseName}" with ${result.topicsCreated} topics and ${result.itemsCreated} items`);
-                setShowAnkiImport(false);
-                // Clear refs
-                if (courseNameRef.current) courseNameRef.current.value = '';
-                if (descriptionRef.current) descriptionRef.current.value = '';
-                if (ankiDataRef.current) ankiDataRef.current.value = '';
-                fetchCourses();
-            } else {
-                showToast('error', 'Import failed');
-            }
+            showToast('success', `Created course "${courseName}"`);
+            setShowAnkiImport(false);
+            if (courseNameRef.current) courseNameRef.current.value = '';
+            if (descriptionRef.current) descriptionRef.current.value = '';
+            if (ankiDataRef.current) ankiDataRef.current.value = '';
+            loadCourses();
         } catch (err) {
-            showToast('error', err.message);
+            showToast('error', err.response?.data?.message || err.message);
         } finally {
             setLoading(l => ({ ...l, anki: false }));
         }
@@ -206,7 +206,7 @@ export default function AdminContent() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => handleDeleteCourse(course.id)}
+                                onClick={() => handleDelete(course.id)}
                                 disabled={loading[`del-${course.id}`]}
                                 className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-400 transition-colors"
                             >
@@ -293,6 +293,3 @@ export default function AdminContent() {
         </div>
     );
 }
-
-
-

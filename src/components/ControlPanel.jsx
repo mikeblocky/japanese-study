@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import {
     Activity, Users, Database, Server, RefreshCw, Trash2,
@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // API helper
-const api = (path) => `${API_BASE}/api${path}`;
+
 
 /**
  * Technical Control Panel - Manager/Admin interface
@@ -29,14 +29,14 @@ const ControlPanel = ({ onClose }) => {
         setLoading(true);
         try {
             const [statsRes, usersRes, healthRes] = await Promise.all([
-                fetch(api('/admin/stats')),
-                fetch(api('/admin/users')),
-                fetch(api('/admin/health'))
+                api.get('/admin/stats'),
+                api.get('/admin/users'),
+                api.get('/admin/health')
             ]);
 
-            if (statsRes.ok) setSystemStats(await statsRes.json());
-            if (usersRes.ok) setUsers(await usersRes.json());
-            if (healthRes.ok) setHealth(await healthRes.json());
+            if (statsRes.status === 200) setSystemStats(statsRes.data);
+            if (usersRes.status === 200) setUsers(usersRes.data);
+            if (healthRes.status === 200) setHealth(healthRes.data);
 
             // Add fetch to logs
             addLog('INFO', 'Data refresh completed');
@@ -61,13 +61,13 @@ const ControlPanel = ({ onClose }) => {
     // Cache clear handler
     const handleClearCache = async (cacheName = null) => {
         const endpoint = cacheName
-            ? api(`/admin/cache/clear/${cacheName}`)
-            : api('/admin/cache/clear');
+            ? `/admin/cache/clear/${cacheName}`
+            : '/admin/cache/clear';
 
         try {
-            const res = await fetch(endpoint, { method: 'POST' });
-            if (res.ok) {
-                const data = await res.json();
+            const res = await api.post(endpoint);
+            if (res.status === 200) {
+                const data = res.data;
                 setActionStatus({ type: 'success', message: data.message });
                 addLog('ACTION', data.message);
                 fetchData();
@@ -81,12 +81,8 @@ const ControlPanel = ({ onClose }) => {
     // Role change handler
     const handleRoleChange = async (userId, newRole) => {
         try {
-            const res = await fetch(api(`/admin/users/${userId}/role`), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole })
-            });
-            if (res.ok) {
+            const res = await api.patch(`/admin/users/${userId}/role`, { role: newRole });
+            if (res.status === 200) {
                 addLog('ACTION', `User ${userId} role changed to ${newRole}`);
                 fetchData();
             }

@@ -1,4 +1,3 @@
-import API_BASE from '@/lib/api';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Cpu, Activity, HardDrive, Recycle, Clock, Zap, Server,
@@ -6,21 +5,16 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin Monitoring Page - Deep server metrics (JVM, Threads, GC, Diagnostics)
  */
 export default function AdminMonitoring() {
     const { user } = useAuth();
-    const [jvm, setJvm] = useState(null);
-    const [threads, setThreads] = useState(null);
-    const [gc, setGc] = useState(null);
-    const [diag, setDiag] = useState(null);
-    const [env, setEnv] = useState(null);
+    const [metrics, setMetrics] = useState({ jvm: {}, threads: {}, gc: {}, diagnostics: {}, environment: {} });
+    const [logs, setLogs] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
     const [isRefreshing, setIsRefreshing] = useState(false);
     // Pause auto-refresh when user is interacting
@@ -29,22 +23,23 @@ export default function AdminMonitoring() {
     const fetchAll = useCallback(async () => {
         if (pauseRefresh || !user) return;
 
-        const headers = { 'X-User-Id': user.id.toString() };
-
         setIsRefreshing(true);
         try {
             const [jvmRes, threadRes, gcRes, diagRes, envRes] = await Promise.all([
-                fetch(api('/admin/metrics/jvm'), { headers }),
-                fetch(api('/admin/metrics/threads'), { headers }),
-                fetch(api('/admin/metrics/gc'), { headers }),
-                fetch(api('/admin/diagnostics'), { headers }),
-                fetch(api('/admin/environment'), { headers })
+                api.get('/admin/metrics/jvm'),
+                api.get('/admin/metrics/threads'),
+                api.get('/admin/metrics/gc'),
+                api.get('/admin/diagnostics'),
+                api.get('/admin/environment')
             ]);
-            if (jvmRes.ok) setJvm(await jvmRes.json());
-            if (threadRes.ok) setThreads(await threadRes.json());
-            if (gcRes.ok) setGc(await gcRes.json());
-            if (diagRes.ok) setDiag(await diagRes.json());
-            if (envRes.ok) setEnv(await envRes.json());
+
+            setMetrics({
+                jvm: jvmRes.data,
+                threads: threadRes.data,
+                gc: gcRes.data,
+                diagnostics: diagRes.data,
+                environment: envRes.data
+            });
         } catch (err) {
             console.error('Failed to fetch metrics:', err);
         } finally {

@@ -1,12 +1,9 @@
-import API_BASE from '@/lib/api';
 import React, { useState, useEffect } from 'react';
-import { Server, Cpu, HardDrive, Activity, Clock, Wifi, Shield, CheckCircle } from 'lucide-react';
+import { Server, Cpu, HardDrive, Activity, Clock, Wifi, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-
-const api = (path) => `${API_BASE}/api${path}`;
 
 /**
  * Admin System Page - System information and health monitoring
@@ -15,25 +12,25 @@ export default function AdminSystem() {
     const { user } = useAuth();
     const [stats, setStats] = useState(null);
     const [health, setHealth] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
-
-        const fetch_data = async () => {
-            const headers = { 'X-User-Id': user.id.toString() };
+        const fetchData = async () => {
             try {
                 const [statsRes, healthRes] = await Promise.all([
-                    fetch(api('/admin/stats'), { headers }),
-                    fetch(api('/admin/health'), { headers })
+                    api.get('/admin/stats'),
+                    api.get('/admin/health')
                 ]);
-                if (statsRes.ok) setStats(await statsRes.json());
-                if (healthRes.ok) setHealth(await healthRes.json());
+                setStats(statsRes.data);
+                setHealth(healthRes.data);
             } catch (err) {
-                console.error('Failed to fetch:', err);
+                console.error("System fetch failed:", err);
+            } finally {
+                setLoading(false);
             }
         };
-        fetch_data();
-        const interval = setInterval(fetch_data, 5000);
+        fetchData();
+        const interval = setInterval(fetchData, 30000);
         return () => clearInterval(interval);
     }, [user]);
 
@@ -108,7 +105,7 @@ export default function AdminSystem() {
                                 <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${(health.memoryMB.used / health.memoryMB.max) * 100}%` }}
+                                        animate={{ width: `${(health.memoryMB.used / health.memoryMB.max) * 100}% ` }}
                                         className="h-full bg-gradient-to-r from-purple-500 to-violet-500 rounded-full"
                                     />
                                 </div>

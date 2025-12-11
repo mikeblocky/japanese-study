@@ -4,7 +4,7 @@ import { ArrowRight, Clock, Flame, Target, Play, ChevronRight } from 'lucide-rea
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import StreakBadge from '@/components/StreakBadge';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 
 export default function Dashboard() {
     const [stats, setStats] = useState({
@@ -18,18 +18,14 @@ export default function Dashboard() {
 
     useEffect(() => {
         // Fetch Due Count
-        fetch(api('/sessions/due?userId=1'))
-            .then(res => res.json())
-            .then(data => setDueCount(data.length))
+        api.get('/sessions/due?userId=1')
+            .then(res => setDueCount(res.data.length))
             .catch(err => console.error("Failed to fetch due items", err));
 
         // Fetch StatsSummary
-        fetch(api('/stats/summary'))
+        api.get('/stats/summary')
             .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch');
-                return res.json();
-            })
-            .then(data => {
+                const data = res.data;
                 setStats({
                     totalStudyMinutes: Math.floor((data.totalDuration || 0) / 60),
                     totalSessions: data.totalSessions || 0,
@@ -40,9 +36,8 @@ export default function Dashboard() {
             .catch(err => console.error("Failed to fetch stats", err));
 
         // Fetch Topic Progress
-        fetch(api('/progress/summary?userId=1'))
-            .then(res => res.json())
-            .then(data => setTopicProgress(data))
+        api.get('/progress/summary?userId=1')
+            .then(res => setTopicProgress(res.data))
             .catch(err => console.error("Failed to fetch progress", err));
     }, []);
 

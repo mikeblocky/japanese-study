@@ -1,53 +1,33 @@
-// API configuration - central place for all API calls
-const API_BASE = import.meta.env.DEV
-    ? 'http://localhost:8080'
-    : (import.meta.env.VITE_API_BASE_URL || 'https://japanese-study-api.onrender.com');
+import axios from 'axios';
 
-// Helper function to build API URLs
-export const api = (path) => `${API_BASE}/api${path}`;
+// Use environment variable for production, fallback to localhost for dev
+export const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
-// Fetch helper with common options
-export const apiFetch = async (path, options = {}) => {
-    const url = api(path);
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
-    return response;
-};
+const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
 
-export const API_ENDPOINTS = {
-    // Auth
-    login: `${API_BASE}/api/auth/login`,
-    register: `${API_BASE}/api/auth/register`,
+api.interceptors.request.use(
+    (config) => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                if (user && user.accessToken) {
+                    config.headers.Authorization = `Bearer ${user.accessToken}`;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to parse user from localStorage:', e);
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
-    // Data
-    courses: `${API_BASE}/api/data/courses`,
-    topics: (courseId) => `${API_BASE}/api/data/courses/${courseId}/topics`,
-    topicItems: (topicId) => `${API_BASE}/api/data/topics/${topicId}/items`,
-    types: `${API_BASE}/api/data/types`,
-    items: `${API_BASE}/api/data/items`,
-
-    // Study
-    mastery: (userId) => `${API_BASE}/api/sessions/mastery/${userId}`,
-    sessions: `${API_BASE}/api/sessions`,
-    sessionsStart: (userId) => `${API_BASE}/api/sessions/start?userId=${userId}`,
-    sessionsDue: (userId) => `${API_BASE}/api/sessions/due?userId=${userId}`,
-
-    // Stats
-    stats: `${API_BASE}/api/stats/summary`,
-    sessionStats: (userId) => `${API_BASE}/api/sessions/stats?userId=${userId}`,
-
-    // Progress
-    progress: (userId) => `${API_BASE}/api/progress/summary?userId=${userId}`,
-
-    // Goals
-    goals: `${API_BASE}/api/goals`,
-};
-
-export default API_BASE;
-
-
+export default api;

@@ -1,4 +1,4 @@
-import API_BASE from '@/lib/api';
+import api from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Clock, Calendar, TrendingUp, Award, BarChart3, Activity, BookOpen } from 'lucide-react';
@@ -15,18 +15,12 @@ const StatsPage = () => {
         const fetchData = async () => {
             try {
                 const [statsRes, masteryRes] = await Promise.all([
-                    fetch('`${API_BASE}/api/sessions/stats?userId=1'),
-                    fetch('`${API_BASE}/api/sessions/mastery?userId=1')
+                    api.get('/sessions/stats?userId=1'),
+                    api.get('/sessions/mastery?userId=1')
                 ]);
 
-                if (statsRes.ok) {
-                    const statsData = await statsRes.json();
-                    setStats(statsData);
-                }
-                if (masteryRes.ok) {
-                    const masteryData = await masteryRes.json();
-                    setMastery(masteryData);
-                }
+                setStats(statsRes.data);
+                setMastery(masteryRes.data);
             } catch (err) {
                 console.error("Failed to load stats", err);
                 setError("Could not load statistics. Is the backend running?");
@@ -40,9 +34,7 @@ const StatsPage = () => {
     // Format duration safely
     const formatDuration = (seconds) => {
         if (!seconds || isNaN(seconds)) return '0m';
-        if (seconds < 60) return '1m'; // Minimum 1m if some seconds exist but < 60? or just 0.
-        // Dashboard uses detailed format, let's match dashboard's logic if possible, 
-        // but dashboard uses minutes input. Here we have seconds.
+        if (seconds < 60) return '1m';
         const minutes = Math.floor(seconds / 60);
         if (minutes < 60) return `${minutes}m`;
         const hours = Math.floor(minutes / 60);
@@ -262,7 +254,3 @@ const StatsPage = () => {
 };
 
 export default StatsPage;
-
-
-
-

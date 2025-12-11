@@ -23,7 +23,7 @@ import AdminMonitoring from './pages/admin/AdminMonitoring';
 import AdminDatabase from './pages/admin/AdminDatabase';
 import AdminMaintenance from './pages/admin/AdminMaintenance';
 import AdminSystem from './pages/admin/AdminSystem';
-import DataMigration from './pages/admin/DataMigration';
+
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
@@ -78,8 +78,7 @@ function App() {
                 </Route>
               </Route>
 
-              {/* Migration page - accessible to all logged-in users */}
-              <Route path="/migrate" element={<DataMigration />} />
+
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
