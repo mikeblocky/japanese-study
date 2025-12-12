@@ -81,7 +81,7 @@ export default function CourseList() {
                                                 {course.topics?.length || 0} topics
                                             </Badge>
                                         </div>
-                                        <CardTitle className="group-hover:text-primary transition-colors mb-2 truncate">{course.title}</CardTitle>
+                                        <CardTitle className="group-hover:text-primary transition-colors mb-2 break-words">{course.title}</CardTitle>
                                         <CardDescription className="line-clamp-2">{course.description}</CardDescription>
                                     </div>
                                     <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
