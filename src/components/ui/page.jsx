@@ -10,7 +10,7 @@ function PageShell({ children, className, ...props }) {
             className={cn("pb-20 pt-8 animate-in fade-in duration-300", className)}
             {...props}
         >
-            <div className="max-w-6xl mx-auto px-6 md:px-8">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8">
                 {children}
             </div>
         </div>
