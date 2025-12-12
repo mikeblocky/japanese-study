@@ -374,3 +374,10 @@ rt.furigana-text {
 .text-4xl rt.furigana-text {
   font-size: 0.4em;
 }
+
+/* Force word break for long text */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}

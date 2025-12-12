@@ -80,10 +80,7 @@ export default function CourseList() {
                                     </Badge>
                                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all ml-auto flex-shrink-0" />
                                 </div>
-                                <h3 
-                                    className="group-hover:text-primary transition-colors mb-2 text-base font-semibold leading-snug w-full"
-                                    style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', hyphens: 'auto' }}
-                                >
+                                <h3 className="group-hover:text-primary transition-colors mb-2 text-base font-semibold leading-snug w-full break-anywhere">
                                     {course.title}
                                 </h3>
                                 <CardDescription className="line-clamp-2">{course.description}</CardDescription>
