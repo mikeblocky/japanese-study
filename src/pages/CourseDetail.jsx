@@ -18,7 +18,14 @@ export default function CourseDetail() {
         // Fetch topics
         api.get(`/courses/${courseId}/topics`)
             .then(res => {
-                const sorted = res.data.sort((a, b) => a.orderIndex - b.orderIndex);
+                // Sort by title (handles "Lesson 01", "Lesson 02" etc.) then by orderIndex
+                const sorted = res.data.sort((a, b) => {
+                    // Extract numbers from lesson titles for proper numeric sorting
+                    const numA = parseInt(a.title?.match(/\d+/)?.[0] || '0');
+                    const numB = parseInt(b.title?.match(/\d+/)?.[0] || '0');
+                    if (numA !== numB) return numA - numB;
+                    return a.orderIndex - b.orderIndex;
+                });
                 setTopics(sorted);
                 setLoading(false);
             })
@@ -64,7 +71,7 @@ export default function CourseDetail() {
                                 className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all group"
                             >
                                 <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary font-mono text-sm font-semibold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                    {String(Number(topic.orderIndex) || (i + 1)).padStart(2, '0')}
+                                    {String(i + 1).padStart(2, '0')}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium group-hover:text-primary transition-colors">{topic.title}</p>
