@@ -73,15 +73,15 @@ export default function CourseList() {
                         <Card className="hover:shadow-md hover:border-primary/50 transition-all group cursor-pointer h-full">
                             <CardHeader>
                                 <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                                             <Badge variant="secondary">Level {i === 0 ? 'N5' : 'N4'}</Badge>
                                             <Badge variant="outline" className="text-xs">
                                                 <BookOpen className="h-3 w-3 mr-1" />
                                                 {course.topics?.length || 0} topics
                                             </Badge>
                                         </div>
-                                        <CardTitle className="group-hover:text-primary transition-colors mb-2 break-words">{course.title}</CardTitle>
+                                        <CardTitle className="group-hover:text-primary transition-colors mb-2 break-all">{course.title}</CardTitle>
                                         <CardDescription className="line-clamp-2">{course.description}</CardDescription>
                                     </div>
                                     <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
