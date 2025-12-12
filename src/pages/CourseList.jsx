@@ -1,41 +1,97 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import api from '@/lib/api';
+import { fetchJsonWithCache } from '@/lib/cache';
+import { PageShell, PageHeader } from '@/components/ui/page';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default function CourseList() {
     const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        api.get('/courses')
-            .then(res => setCourses(res.data))
-            .catch(err => console.error("Failed to fetch courses", err));
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+
+        const loadCoursesWithTopics = async () => {
+            try {
+                const coursesRes = await api.get('/courses');
+                const baseCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [];
+
+                // Fetch topic counts for each course
+                const coursesWithTopics = await Promise.all(baseCourses.map(async (course) => {
+                    try {
+                        const topicsRes = await api.get(`/courses/${course.id}/topics`);
+                        return { ...course, topics: topicsRes.data || [] };
+                    } catch (err) {
+                        console.error('Failed to load topics for course', course.id, err);
+                        return { ...course, topics: [] };
+                    }
+                }));
+
+                if (!cancelled) {
+                    setCourses(coursesWithTopics);
+                    setLoading(false);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Failed to fetch courses', err);
+                    setError('Failed to load courses.');
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadCoursesWithTopics();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     return (
-        <div className="max-w-5xl mx-auto space-y-12">
-            <div className="border-b pb-6">
-                <h1 className="text-4xl font-light tracking-tight">Courses</h1>
-            </div>
+        <PageShell className="space-y-8">
+            <PageHeader title="Courses" description="Browse the library and jump into a course." />
 
-            <div className="space-y-4">
+            {loading && courses.length === 0 && (
+                <div className="py-10 text-center text-muted-foreground">Loading courses…</div>
+            )}
+            {error && courses.length === 0 && (
+                <Card className="border-destructive">
+                    <CardContent className="pt-6">
+                        <p className="text-sm text-destructive">{error}</p>
+                    </CardContent>
+                </Card>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {courses.map((course, i) => (
-                    <Link
-                        key={course.id}
-                        to={`/courses/${course.id}`}
-                        className="group flex items-center justify-between py-8 border-b border-border/50 hover:bg-secondary/20 transition-colors px-4 -mx-4 rounded-xl"
-                    >
-                        <div className="space-y-2">
-                            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Level {i === 0 ? 'N5' : 'N4'}</span>
-                            <h3 className="text-3xl font-medium group-hover:opacity-70 transition-opacity">{course.title}</h3>
-                            <p className="text-muted-foreground max-w-xl">{course.description}</p>
-                        </div>
-
-                        <ArrowUpRight className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <Link key={course.id} to={`/courses/${course.id}`}>
+                        <Card className="hover:shadow-md hover:border-primary/50 transition-all group cursor-pointer h-full">
+                            <CardHeader>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Badge variant="secondary">Level {i === 0 ? 'N5' : 'N4'}</Badge>
+                                            <Badge variant="outline" className="text-xs">
+                                                <BookOpen className="h-3 w-3 mr-1" />
+                                                {course.topics?.length || 0} topics
+                                            </Badge>
+                                        </div>
+                                        <CardTitle className="group-hover:text-primary transition-colors mb-2">{course.title}</CardTitle>
+                                        <CardDescription className="line-clamp-2">{course.description}</CardDescription>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
+                                </div>
+                            </CardHeader>
+                        </Card>
                     </Link>
                 ))}
             </div>
-        </div>
+        </PageShell>
     );
 }
 

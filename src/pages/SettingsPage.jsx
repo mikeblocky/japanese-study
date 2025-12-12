@@ -3,34 +3,34 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-    Settings as SettingsIcon,
-    User,
+    User as UserIcon,
     LogOut,
-    Type,
-    Clock,
-    Bell,
-    Shield,
-    Palette,
-    ChevronRight,
     Save,
-    Check,
-    X
+    X,
+    Mail,
+    Shield,
+    Sparkles,
+    Sliders
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { PageShell, PageHeader } from '@/components/ui/page';
 
 export default function SettingsPage() {
-    const { settings, updateSetting, resetSettings } = useSettings();
+    const { settings, updateSetting } = useSettings();
     const { user, logout, updateProfile } = useAuth();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState('preferences');
     const [editingProfile, setEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({
         username: user?.username || '',
         email: user?.email || ''
     });
-    const [saveStatus, setSaveStatus] = useState(null);
 
     const handleLogout = () => {
         logout();
@@ -41,402 +41,204 @@ export default function SettingsPage() {
         if (!user?.id) return;
         const result = await updateProfile(user.id, profileForm);
         if (result.success) {
-            setSaveStatus('success');
             setEditingProfile(false);
-            setTimeout(() => setSaveStatus(null), 2000);
-        } else {
-            setSaveStatus('error');
         }
     };
 
-    const tabs = [
-        { id: 'preferences', label: 'Preferences', icon: SettingsIcon },
-        { id: 'account', label: 'Account', icon: User },
-        { id: 'appearance', label: 'Appearance', icon: Palette },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-    ];
-
-    const SettingCard = ({ title, description, children }) => (
-        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-200/50 dark:border-slate-700/50 p-5 space-y-4">
-            <div>
-                <h3 className="font-medium text-slate-900 dark:text-white">{title}</h3>
-                {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
-            </div>
-            {children}
-        </div>
-    );
-
-    const Toggle = ({ checked, onChange, disabled }) => (
-        <button
-            onClick={() => !disabled && onChange(!checked)}
-            disabled={disabled}
-            className={cn(
-                "relative w-11 h-6 rounded-full transition-all duration-200",
-                checked ? "bg-indigo-500" : "bg-slate-200 dark:bg-slate-700",
-                disabled && "opacity-50 cursor-not-allowed"
-            )}
-        >
-            <motion.div
-                animate={{ x: checked ? 20 : 2 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-            />
-        </button>
-    );
-
     return (
-        <div className="pb-20 animate-in fade-in duration-500">
-            <div className="max-w-6xl mx-auto px-4 md:px-6">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-2 mb-10"
-                >
-                    <h1 className="text-4xl md:text-5xl font-light tracking-tight text-foreground/90">Settings</h1>
-                    <p className="text-lg md:text-xl text-muted-foreground/80 font-light">Manage your account and preferences</p>
-                </motion.div>
+        <PageShell>
+            <PageHeader 
+                title="Settings" 
+                description="Customize your account and study preferences"
+            />
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Sidebar Navigation */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-1"
-                    >
-                        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-2 sticky top-4">
-                            {tabs.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                                        activeTab === tab.id
-                                            ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-                                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                    )}
-                                >
-                                    <tab.icon className="w-4 h-4" />
-                                    {tab.label}
-                                    {activeTab === tab.id && (
-                                        <ChevronRight className="w-4 h-4 ml-auto" />
-                                    )}
-                                </button>
-                            ))}
-
-                            {/* Logout Button */}
-                            <div className="border-t border-slate-200 dark:border-slate-700 mt-2 pt-2">
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                    Sign out
-                                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Profile Card - Featured */}
+                <div className="lg:col-span-3">
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                                <div className="relative flex-shrink-0">
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-3xl sm:text-4xl font-bold">
+                                        {user?.username?.[0]?.toUpperCase() || 'U'}
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                                        <h2 className="text-xl sm:text-2xl font-bold">{user?.username || 'Guest'}</h2>
+                                        <Badge variant="secondary" className="h-6">
+                                            <Shield className="mr-1 h-3 w-3" />
+                                            {user?.role || 'STUDENT'}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <Mail className="h-4 w-4" />
+                                        <span className="text-sm break-all">{user?.email || 'No email set'}</span>
+                                    </div>
+                                </div>
+                                {!editingProfile && (
+                                    <Button variant="outline" onClick={() => setEditingProfile(true)} className="flex-shrink-0 w-full sm:w-auto">
+                                        Edit profile
+                                    </Button>
+                                )}
                             </div>
-                        </div>
-                    </motion.div>
 
-                    {/* Content Area */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="lg:col-span-3 space-y-6"
-                    >
-                        <AnimatePresence mode="wait">
-                            {/* Preferences Tab */}
-                            {activeTab === 'preferences' && (
-                                <motion.div
-                                    key="preferences"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
-                                >
-                                    <SettingCard title="Study preferences" description="Customize how you study">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Show furigana</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Display reading above kanji</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.showFurigana}
-                                                    onChange={(v) => updateSetting('showFurigana', v)}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Auto-advance cards</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Automatically move to next card</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.autoAdvance}
-                                                    onChange={(v) => updateSetting('autoAdvance', v)}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Card animations</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Enable flip animations</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.cardAnimations}
-                                                    onChange={(v) => updateSetting('cardAnimations', v)}
-                                                />
-                                            </div>
+                            {editingProfile && (
+                                <>
+                                    <Separator className="my-6" />
+                                    <div className="space-y-4 max-w-md">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="username" className="flex items-center gap-2">
+                                                <UserIcon className="h-4 w-4" />
+                                                Username
+                                            </Label>
+                                            <Input
+                                                id="username"
+                                                type="text"
+                                                value={profileForm.username}
+                                                onChange={(e) => setProfileForm(p => ({ ...p, username: e.target.value }))}
+                                                placeholder="Enter username"
+                                                className="w-full"
+                                            />
                                         </div>
-                                    </SettingCard>
-
-                                    <SettingCard title="Session settings" description="Configure study sessions">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Default duration</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Minutes per session</div>
-                                                </div>
-                                                <input
-                                                    type="number"
-                                                    min={5}
-                                                    max={120}
-                                                    value={settings.defaultSessionDuration || 30}
-                                                    onChange={(e) => updateSetting('defaultSessionDuration', parseInt(e.target.value))}
-                                                    className="w-20 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-center"
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Show timer</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Display elapsed time</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.showTimer}
-                                                    onChange={(v) => updateSetting('showTimer', v)}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Sound effects</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Play sounds for answers</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.playSound}
-                                                    onChange={(v) => updateSetting('playSound', v)}
-                                                />
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email" className="flex items-center gap-2">
+                                                <Mail className="h-4 w-4" />
+                                                Email address
+                                            </Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                value={profileForm.email}
+                                                onChange={(e) => setProfileForm(p => ({ ...p, email: e.target.value }))}
+                                                placeholder="your@email.com"
+                                                className="w-full"
+                                            />
                                         </div>
-                                    </SettingCard>
-                                </motion.div>
+                                        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                                            <Button onClick={handleProfileSave} className="w-full sm:w-auto">
+                                                <Save className="mr-2 h-4 w-4" />
+                                                Save changes
+                                            </Button>
+                                            <Button variant="outline" onClick={() => setEditingProfile(false)} className="w-full sm:w-auto">
+                                                <X className="mr-2 h-4 w-4" />
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
                             )}
+                        </CardContent>
+                    </Card>
+                </div>
 
-                            {/* Account Tab */}
-                            {activeTab === 'account' && (
-                                <motion.div
-                                    key="account"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
+                {/* Study Preferences */}
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                    <Sliders className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <CardTitle>Study Preferences</CardTitle>
+                                    <CardDescription>Customize your learning experience</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="flex items-center justify-between space-x-2">
+                                <Label htmlFor="furigana" className="flex flex-col space-y-1 cursor-pointer">
+                                    <span className="font-semibold">Show furigana</span>
+                                    <span className="font-normal text-sm text-muted-foreground">Display readings above kanji characters</span>
+                                </Label>
+                                <Switch 
+                                    id="furigana" 
+                                    checked={settings.showFurigana} 
+                                    onCheckedChange={(v) => updateSetting('showFurigana', v)} 
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between space-x-2">
+                                <Label htmlFor="autoAdvance" className="flex flex-col space-y-1 cursor-pointer">
+                                    <span className="font-semibold">Auto-advance cards</span>
+                                    <span className="font-normal text-sm text-muted-foreground">Automatically move to the next card</span>
+                                </Label>
+                                <Switch 
+                                    id="autoAdvance" 
+                                    checked={settings.autoAdvance} 
+                                    onCheckedChange={(v) => updateSetting('autoAdvance', v)} 
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Appearance */}
+                <div className="lg:col-span-1">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                    <Sparkles className="h-5 w-5 text-purple-500" />
+                                </div>
+                                <div>
+                                    <CardTitle>Appearance</CardTitle>
+                                    <CardDescription>Visual preferences</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="flex items-center justify-between space-x-2">
+                                <Label htmlFor="cardAnim" className="flex flex-col space-y-1 cursor-pointer">
+                                    <span className="font-semibold text-sm">Card animations</span>
+                                    <span className="font-normal text-xs text-muted-foreground">Flip effects</span>
+                                </Label>
+                                <Switch 
+                                    id="cardAnim" 
+                                    checked={settings.cardAnimations} 
+                                    onCheckedChange={(v) => updateSetting('cardAnimations', v)} 
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between space-x-2">
+                                <Label htmlFor="uiAnim" className="flex flex-col space-y-1 cursor-pointer">
+                                    <span className="font-semibold text-sm">UI animations</span>
+                                    <span className="font-normal text-xs text-muted-foreground">Transitions</span>
+                                </Label>
+                                <Switch 
+                                    id="uiAnim" 
+                                    checked={settings.uiAnimations === true} 
+                                    onCheckedChange={(v) => updateSetting('uiAnimations', v)} 
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Sign Out */}
+                <div className="lg:col-span-3">
+                    <Card className="border-destructive/50">
+                        <CardContent className="pt-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <p className="font-semibold">Sign out of your account</p>
+                                    <p className="text-sm text-muted-foreground">You'll need to log in again to access your data</p>
+                                </div>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleLogout}
+                                    className="w-full sm:w-auto flex-shrink-0"
                                 >
-                                    <SettingCard title="Profile information" description="Update your account details">
-                                        <div className="space-y-4">
-                                            {/* Avatar */}
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-2xl font-medium">
-                                                    {user?.username?.[0]?.toUpperCase() || 'U'}
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-slate-900 dark:text-white">{user?.username}</div>
-                                                    <div className="text-sm text-slate-500">{user?.email}</div>
-                                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                                                        {user?.role || 'STUDENT'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Edit Form */}
-                                            {editingProfile ? (
-                                                <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                                    <div>
-                                                        <label className="text-xs font-medium text-slate-500 block mb-1">Username</label>
-                                                        <input
-                                                            type="text"
-                                                            value={profileForm.username}
-                                                            onChange={(e) => setProfileForm(p => ({ ...p, username: e.target.value }))}
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-medium text-slate-500 block mb-1">Email</label>
-                                                        <input
-                                                            type="email"
-                                                            value={profileForm.email}
-                                                            onChange={(e) => setProfileForm(p => ({ ...p, email: e.target.value }))}
-                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-                                                        />
-                                                    </div>
-                                                    <div className="flex gap-2 pt-2">
-                                                        <button
-                                                            onClick={handleProfileSave}
-                                                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 transition-colors"
-                                                        >
-                                                            <Save className="w-4 h-4" />
-                                                            Save changes
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setEditingProfile(false)}
-                                                            className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setEditingProfile(true)}
-                                                    className="text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-                                                >
-                                                    Edit profile
-                                                </button>
-                                            )}
-                                        </div>
-                                    </SettingCard>
-
-                                    <SettingCard title="Security" description="Manage your account security">
-                                        <div className="space-y-4">
-                                            <button className="flex items-center justify-between w-full py-2 text-left group">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">Change password</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Update your password</div>
-                                                </div>
-                                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                                            </button>
-                                            <button className="flex items-center justify-between w-full py-2 text-left group">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">Two-factor authentication</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Add an extra layer of security</div>
-                                                </div>
-                                                <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">Coming soon</span>
-                                            </button>
-                                        </div>
-                                    </SettingCard>
-
-                                    <SettingCard title="Danger zone" description="Irreversible actions">
-                                        <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                            <X className="w-4 h-4" />
-                                            Delete account
-                                        </button>
-                                    </SettingCard>
-                                </motion.div>
-                            )}
-
-                            {/* Appearance Tab */}
-                            {activeTab === 'appearance' && (
-                                <motion.div
-                                    key="appearance"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
-                                >
-                                    <SettingCard title="Display settings" description="Customize how the app looks">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Font size</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Adjust text size</div>
-                                                </div>
-                                                <select
-                                                    value={settings.fontSize || 'medium'}
-                                                    onChange={(e) => updateSetting('fontSize', e.target.value)}
-                                                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-                                                >
-                                                    <option value="small">Small</option>
-                                                    <option value="medium">Medium</option>
-                                                    <option value="large">Large</option>
-                                                </select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Theme</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Choose your preferred theme</div>
-                                                </div>
-                                                <select
-                                                    value={settings.theme || 'system'}
-                                                    onChange={(e) => updateSetting('theme', e.target.value)}
-                                                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-                                                >
-                                                    <option value="light">Light</option>
-                                                    <option value="dark">Dark</option>
-                                                    <option value="system">System</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </SettingCard>
-                                </motion.div>
-                            )}
-
-                            {/* Notifications Tab */}
-                            {activeTab === 'notifications' && (
-                                <motion.div
-                                    key="notifications"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-6"
-                                >
-                                    <SettingCard title="Push notifications" description="Manage notification preferences">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Study reminders</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Get reminded to study</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.studyReminders || false}
-                                                    onChange={(v) => updateSetting('studyReminders', v)}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Streak alerts</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Don't lose your streak</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.streakAlerts || false}
-                                                    onChange={(v) => updateSetting('streakAlerts', v)}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium text-sm text-slate-700 dark:text-slate-200">Achievement notifications</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">Celebrate your progress</div>
-                                                </div>
-                                                <Toggle
-                                                    checked={settings.achievementNotifications !== false}
-                                                    onChange={(v) => updateSetting('achievementNotifications', v)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </SettingCard>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Reset Button */}
-                        <div className="flex justify-end pt-4">
-                            <button
-                                onClick={resetSettings}
-                                className="px-5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                Reset all settings
-                            </button>
-                        </div>
-                    </motion.div>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Sign out
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
-        </div>
+        </PageShell>
     );
 }
 

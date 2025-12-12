@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogIn, ArrowRight, User, Lock } from 'lucide-react';
+import { LogIn, ArrowRight } from 'lucide-react';
 import InteractiveDotGrid from '@/components/ui/InteractiveDotGrid';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const LoginPage = () => {
     const [username, setUsername] = useState('');
@@ -42,76 +46,75 @@ const LoginPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-sm bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_rgb(0,0,0,0.04)] border border-white/50 p-8 relative z-10"
+                className="w-full max-w-md relative z-10"
             >
-                <div className="text-left mb-8">
-                    <div className="inline-flex p-2.5 rounded-xl bg-slate-50 mb-4 border border-slate-100 shadow-sm">
-                        <LogIn className="w-5 h-5 text-slate-700" />
-                    </div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
-                    <p className="text-slate-500 text-sm mt-1">Enter your credentials to continue</p>
-                </div>
+                <Card className="bg-white/90 backdrop-blur-xl shadow-2xl">
+                    <CardHeader className="space-y-1">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                                <LogIn className="w-5 h-5 text-primary" />
+                            </div>
+                        </div>
+                        <CardTitle className="text-2xl">Welcome back</CardTitle>
+                        <CardDescription>Enter your credentials to continue</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20"
+                                >
+                                    {error}
+                                </motion.div>
+                            )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            className="p-3 rounded-lg bg-red-50 text-red-600 text-xs font-medium border border-red-100 flex items-start"
-                        >
-                            {error}
-                        </motion.div>
-                    )}
-
-                    <div className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 pl-1">Username</label>
-                            <div className="relative group">
-                                <User className="absolute left-3.5 top-3 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                                <input
+                            <div className="space-y-2">
+                                <Label htmlFor="username">Username</Label>
+                                <Input
+                                    id="username"
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-white focus:border-indigo-500/30 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-slate-300"
                                     placeholder="Enter your username"
                                     required
                                 />
                             </div>
-                        </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-400 pl-1">Password</label>
-                            <div className="relative group">
-                                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                                <input
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-white focus:border-indigo-500/30 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-slate-300"
-                                    placeholder="••••••••"
+                                    placeholder="Enter your password"
                                     required
                                 />
                             </div>
-                        </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium shadow-lg shadow-slate-900/10 hover:bg-slate-800 hover:shadow-slate-900/20 active:translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 group mt-2 disabled:opacity-50"
-                    >
-                        {loading ? 'Signing in...' : <>Sign in <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" /></>}
-                    </button>
-                </form>
-
-                <div className="mt-6 text-left border-t border-slate-100 pt-6">
-                    <p className="text-slate-400 text-xs">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="text-indigo-600 font-semibold hover:text-indigo-700 hover:underline transition-all">
-                            Create one
-                        </Link>
-                    </p>
-                </div>
+                            <Button type="submit" disabled={loading} className="w-full">
+                                {loading ? (
+                                    'Signing in...'
+                                ) : (
+                                    <>
+                                        Sign in
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+                    </CardContent>
+                    <CardFooter className="flex justify-center">
+                        <p className="text-sm text-muted-foreground">
+                            Don't have an account?{' '}
+                            <Link to="/signup" className="font-medium text-primary hover:underline">
+                                Sign up
+                            </Link>
+                        </p>
+                    </CardFooter>
+                </Card>
             </motion.div>
         </div>
     );

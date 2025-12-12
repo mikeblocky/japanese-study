@@ -41,6 +41,32 @@ export function AuthProvider({ children }) {
             return { success: true, user: userObj };
         } catch (error) {
             console.error("Login error", error);
+
+            // Render (free tier) + browser CORS/preflight issues often show up as a generic network error.
+            // Retry once after a short delay to handle "waking up" instances.
+            const isNetwork = error?.code === 'ERR_NETWORK' || String(error?.message || '').toLowerCase().includes('network');
+            if (isNetwork) {
+                try {
+                    await new Promise((r) => setTimeout(r, 1200));
+                    const retry = await api.post('/auth/login', { username, password });
+                    const userData = retry.data;
+
+                    const userObj = {
+                        uid: userData.id,
+                        email: userData.username,
+                        displayName: userData.username,
+                        accessToken: userData.accessToken,
+                        role: userData.roles && userData.roles.length > 0 ? userData.roles[0].replace('ROLE_', '') : 'USER'
+                    };
+
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                    setUser(userObj);
+                    return { success: true, user: userObj };
+                } catch (retryError) {
+                    console.error('Login retry failed', retryError);
+                }
+            }
+
             const message = error.response?.data?.message || error.message || 'Login failed';
             return { success: false, message };
         }

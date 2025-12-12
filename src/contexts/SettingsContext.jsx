@@ -12,6 +12,8 @@ const defaultSettings = {
 
     // Display Preferences
     cardAnimations: true,
+    // Global UI animations (menus, page transitions, backgrounds)
+    uiAnimations: false,
     fontSize: 'medium', // 'small', 'medium', 'large'
 
     // Study Session

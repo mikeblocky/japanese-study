@@ -1,126 +1,147 @@
 import api from '@/lib/api';
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Edit, Save, X, RotateCcw, ChevronDown, ChevronRight, MoreHorizontal, BookOpen, Layers, CheckCircle2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, ChevronRight, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageShell, PageHeader } from '@/components/ui/page';
+import { Label } from '@/components/ui/label';
 
 const WordConsole = () => {
-    // Data State
     const [courses, setCourses] = useState([]);
-    const [allItems, setAllItems] = useState([]);
-    const [filteredItems, setFilteredItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [masteryData, setMasteryData] = useState({});
-
-    // Filter State
+    const [items, setItems] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('all');
     const [selectedTopic, setSelectedTopic] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('default'); // 'default', 'srs_asc', 'srs_desc'
-
-    // UI State
-    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const [expandedCourses, setExpandedCourses] = useState({});
-    const [editingItem, setEditingItem] = useState(null);
-    const [editForm, setEditForm] = useState({ primaryText: '', secondaryText: '', meaning: '' });
-
-    // Pagination
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const [coursesLoading, setCoursesLoading] = useState(true);
+    const [itemsLoading, setItemsLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
 
-    // --- Data Fetching ---
+    // Management states
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [formData, setFormData] = useState({
+        primaryText: '',
+        secondaryText: '',
+        meaning: '',
+        topicId: ''
+    });
+
+    // Load courses and topics only (not all items upfront)
     useEffect(() => {
-        const fetchAll = async () => {
+        let cancelled = false;
+        const load = async () => {
             try {
-                setLoading(true);
-                const [coursesRes, masteryRes] = await Promise.all([
-                    api.get('/courses'),
-                    api.get('/sessions/mastery?userId=1')
-                ]);
+                setCoursesLoading(true);
+                const coursesRes = await api.get('/courses');
+                const baseCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [];
 
-                const coursesData = coursesRes.data;
-                const masteryJson = masteryRes.data;
+                const coursesWithTopics = await Promise.all(baseCourses.map(async (course) => {
+                    try {
+                        const topicsRes = await api.get(`/courses/${course.id}/topics`);
+                        return { ...course, topics: topicsRes.data || [] };
+                    } catch (err) {
+                        console.error('Failed to load topics', err);
+                        return { ...course, topics: [] };
+                    }
+                }));
 
-                // Mastery Map
-                const map = {};
-                masteryJson.forEach(m => map[m.item.id] = m);
-                setMasteryData(map);
+                if (!cancelled) {
+                    setCourses(coursesWithTopics);
+                }
+            } catch (err) {
+                console.error('Failed to load console data', err);
+            } finally {
+                if (!cancelled) setCoursesLoading(false);
+            }
+        };
 
-                // Fetch items for each topic since they're not included in courses response
-                const flattened = [];
-                for (const course of coursesData) {
-                    for (const topic of (course.topics || [])) {
-                        try {
-                            const itemsRes = await api.get(`/topics/${topic.id}/items`);
-                            const items = itemsRes.data;
-                            items.forEach(item => {
-                                flattened.push({
+        load();
+        return () => { cancelled = true; };
+    }, []);
+
+    // Load items on demand based on selected filters
+    useEffect(() => {
+        let cancelled = false;
+        const loadItems = async () => {
+            if (selectedCourse === 'all' && selectedTopic === 'all') {
+                setItems([]);
+                return;
+            }
+
+            try {
+                setItemsLoading(true);
+                let loadedItems = [];
+
+                if (selectedTopic !== 'all') {
+                    const itemsRes = await api.get(`/topics/${selectedTopic}/items`);
+                    const topic = courses.flatMap(c => c.topics).find(t => t.id.toString() === selectedTopic.toString());
+                    const course = courses.find(c => c.topics.some(t => t.id.toString() === selectedTopic.toString()));
+                    loadedItems = (itemsRes.data || []).map(item => ({
+                        ...item,
+                        courseId: course?.id,
+                        courseTitle: course?.title,
+                        topicId: topic?.id,
+                        topicTitle: topic?.title
+                    }));
+                } else if (selectedCourse !== 'all') {
+                    const course = courses.find(c => c.id.toString() === selectedCourse.toString());
+                    if (course) {
+                        const topicItems = await Promise.all((course.topics || []).map(async (topic) => {
+                            try {
+                                const itemsRes = await api.get(`/topics/${topic.id}/items`);
+                                return (itemsRes.data || []).map(item => ({
                                     ...item,
-                                    courseTitle: course.title,
                                     courseId: course.id,
-                                    topicTitle: topic.title,
-                                    topicId: topic.id
-                                });
-                            });
-                            // Also store items count on topic for sidebar display
-                            topic.studyItems = items;
-                        } catch (err) {
-                            console.error(`Failed to fetch items for topic ${topic.id}:`, err);
-                        }
+                                    courseTitle: course.title,
+                                    topicId: topic.id,
+                                    topicTitle: topic.title
+                                }));
+                            } catch (err) {
+                                console.error('Failed to load items', err);
+                                return [];
+                            }
+                        }));
+                        loadedItems = topicItems.flat();
                     }
                 }
 
-                setCourses(coursesData);
-                setAllItems(flattened);
+                if (!cancelled) {
+                    setItems(loadedItems);
+                }
             } catch (err) {
-                console.error("Failed to fetch data:", err);
+                console.error('Failed to load items', err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setItemsLoading(false);
             }
         };
-        fetchAll();
-    }, []);
 
-    // --- Filtering Logic ---
+        loadItems();
+        return () => { cancelled = true; };
+    }, [selectedCourse, selectedTopic, courses]);
+
+    const filteredItems = useMemo(() => {
+        if (!searchQuery) return items;
+        const q = searchQuery.toLowerCase();
+        return items.filter(item =>
+            item.primaryText?.toLowerCase().includes(q) ||
+            item.meaning?.toLowerCase().includes(q)
+        );
+    }, [items, searchQuery]);
+
     useEffect(() => {
-        let result = allItems;
-
-        if (selectedCourse !== 'all') {
-            result = result.filter(item => item.courseId.toString() === selectedCourse.toString());
-        }
-
-        if (selectedTopic !== 'all') {
-            result = result.filter(item => item.topicId.toString() === selectedTopic.toString());
-        }
-
-        if (searchQuery) {
-            const lowerQuery = searchQuery.toLowerCase();
-            result = result.filter(item =>
-                (item.primaryText && item.primaryText.toLowerCase().includes(lowerQuery)) ||
-                (item.meaning && item.meaning.toLowerCase().includes(lowerQuery))
-            );
-        }
-
-        // Sorting
-        if (sortBy === 'srs_asc') {
-            result.sort((a, b) => (masteryData[a.id]?.srsLevel || 0) - (masteryData[b.id]?.srsLevel || 0));
-        } else if (sortBy === 'srs_desc') {
-            result.sort((a, b) => (masteryData[b.id]?.srsLevel || 0) - (masteryData[a.id]?.srsLevel || 0));
-        }
-
-        setFilteredItems(result);
         setCurrentPage(1);
-    }, [selectedCourse, selectedTopic, searchQuery, allItems, masteryData, sortBy]);
+    }, [filteredItems]);
 
-    // --- Pagination ---
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
-
-    // --- Handlers ---
-    const toggleCourse = (courseId) => {
-        setExpandedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
-    };
 
     const handleSelectCourse = (courseId) => {
         setSelectedCourse(courseId);
@@ -131,304 +152,388 @@ const WordConsole = () => {
 
     const handleSelectTopic = (topicId, courseId, e) => {
         e.stopPropagation();
-        setSelectedCourse(courseId); // Ensure parent course is selected
+        setSelectedCourse(courseId);
         setSelectedTopic(topicId);
         setMobileFiltersOpen(false);
     };
 
-    const getSRSLevel = (itemId) => masteryData[itemId]?.srsLevel || 0;
-
-    const handleEditClick = (item) => {
-        setEditingItem(item);
-        setEditForm({
-            primaryText: item.primaryText,
-            secondaryText: item.secondaryText || '',
-            meaning: item.meaning
-        });
+    const toggleCourse = (courseId) => {
+        setExpandedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
     };
 
-    const handleSave = async () => {
-        if (!editingItem) return;
+    const showEmptyState = selectedCourse === 'all' && selectedTopic === 'all' && !searchQuery;
+
+    // Management functions
+    const handleAddItem = async () => {
+        if (!formData.primaryText || !formData.meaning || !formData.topicId) {
+            alert('Please fill in all required fields');
+            return;
+        }
         try {
-            const res = await api.put(`/items/${editingItem.id}`, { ...editingItem, ...editForm });
-            const updated = res.data;
-            setAllItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...editForm } : i));
-            setEditingItem(null);
+            await api.post(`/topics/${formData.topicId}/items`, {
+                primaryText: formData.primaryText,
+                secondaryText: formData.secondaryText,
+                meaning: formData.meaning
+            });
+            setShowAddForm(false);
+            setFormData({ primaryText: '', secondaryText: '', meaning: '', topicId: '' });
+            // Reload items
+            setSelectedCourse(selectedCourse);
+            setSelectedTopic(formData.topicId);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to add item', err);
+            alert('Failed to add item. Please try again.');
         }
     };
 
-    if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground animate-pulse">Loading console...</div>;
+    const handleEditItem = async () => {
+        if (!editingItem) return;
+        try {
+            await api.put(`/items/${editingItem.id}`, {
+                primaryText: formData.primaryText,
+                secondaryText: formData.secondaryText,
+                meaning: formData.meaning
+            });
+            setEditingItem(null);
+            setFormData({ primaryText: '', secondaryText: '', meaning: '', topicId: '' });
+            // Reload items
+            const loadedItems = await api.get(`/topics/${selectedTopic}/items`);
+            setItems(items.map(item => 
+                item.id === editingItem.id 
+                    ? { ...item, ...formData }
+                    : item
+            ));
+        } catch (err) {
+            console.error('Failed to edit item', err);
+            alert('Failed to edit item. Please try again.');
+        }
+    };
+
+    const handleDeleteItem = async (itemId) => {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+        try {
+            await api.delete(`/items/${itemId}`);
+            setItems(items.filter(item => item.id !== itemId));
+        } catch (err) {
+            console.error('Failed to delete item', err);
+            alert('Failed to delete item. Please try again.');
+        }
+    };
+
+    const openEditForm = (item) => {
+        setEditingItem(item);
+        setFormData({
+            primaryText: item.primaryText,
+            secondaryText: item.secondaryText || '',
+            meaning: item.meaning,
+            topicId: item.topicId
+        });
+        setShowAddForm(true);
+    };
+
+    const closeForm = () => {
+        setShowAddForm(false);
+        setEditingItem(null);
+        setFormData({ primaryText: '', secondaryText: '', meaning: '', topicId: '' });
+    };
+
+    const canAddItems = selectedTopic !== 'all' || selectedCourse !== 'all';
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen gap-6 pb-20 max-w-7xl mx-auto md:pt-6">
-
-            {/* --- Mobile Header / Filter Toggle --- */}
-            <div className="md:hidden flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-light tracking-tight">Console</h1>
-                <button
-                    onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-                    className="p-2 bg-secondary/50 rounded-lg text-sm font-medium flex items-center gap-2"
-                >
-                    <Filter className="w-4 h-4" /> Filters
-                </button>
+        <PageShell>
+            <div className="flex items-center justify-between mb-6">
+                <PageHeader 
+                    title="Word console" 
+                    description={itemsLoading ? 'Loading...' : `Manage ${filteredItems.length} vocabulary items`}
+                />
+                <Button onClick={() => setShowAddForm(true)} disabled={!canAddItems} className="hidden sm:flex gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add word
+                </Button>
             </div>
 
-            {/* --- Sidebar Filters (Desktop + Mobile Drawer) --- */}
-            <aside className={cn(
-                "fixed inset-0 z-40 bg-background/95 backdrop-blur-xl p-6 transition-transform duration-300 md:relative md:transform-none md:bg-transparent md:backdrop-blur-none md:p-0 md:w-64 md:block border-r md:border-none border-border/50",
-                mobileFiltersOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-            )}>
-                <div className="flex justify-between items-center md:hidden mb-6">
-                    <h2 className="font-semibold text-lg">Filters</h2>
-                    <button onClick={() => setMobileFiltersOpen(false)}><X className="w-5 h-5" /></button>
-                </div>
-
-                <div className="space-y-6">
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <input
-                            placeholder="Search..."
-                            className="w-full pl-9 pr-4 py-2 bg-secondary/30 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+            <div className="flex flex-col md:flex-row gap-6">
+                    {mobileFiltersOpen && (
+                        <div 
+                            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+                            onClick={() => setMobileFiltersOpen(false)}
                         />
-                    </div>
-
-                    {/* Filter List */}
-                    <div className="space-y-1">
-                        <button
-                            onClick={() => handleSelectCourse('all')}
-                            className={cn(
-                                "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
-                                selectedCourse === 'all' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                            )}
-                        >
-                            <Layers className="w-4 h-4" /> All Items
-                        </button>
-
-                        <div className="pt-2 pb-1 text-xs font-semibold text-muted-foreground/50 uppercase tracking-wider px-3">Courses</div>
-
-                        <div className="space-y-1">
-                            {courses.map(course => (
-                                <div key={course.id} className="space-y-1">
-                                    <div className="flex items-center gap-1 group">
-                                        <button
-                                            onClick={() => toggleCourse(course.id)}
-                                            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            <ChevronRight className={cn("w-3 h-3 transition-transform", expandedCourses[course.id] && "rotate-90")} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleSelectCourse(course.id)}
-                                            className={cn(
-                                                "flex-1 text-left px-2 py-1.5 rounded-md text-sm transition-colors truncate",
-                                                selectedCourse.toString() === course.id.toString() && selectedTopic === 'all'
-                                                    ? "bg-primary/10 text-primary font-medium"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                            )}
-                                        >
-                                            {course.title}
-                                        </button>
+                    )}
+                    <aside className={cn(
+                        "fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl border-t shadow-2xl max-h-[80vh] md:relative md:bottom-auto md:w-64 md:bg-transparent md:shadow-none md:border-0 md:rounded-none md:max-h-none transition-transform duration-300",
+                        mobileFiltersOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"
+                    )}>
+                        <Card className="border-0 md:border">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3 md:hidden">
+                                <CardTitle className="text-lg">Filters</CardTitle>
+                                <Button variant="ghost" size="sm" onClick={() => setMobileFiltersOpen(false)}>
+                                    <X className="h-5 w-5" />
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-4 max-h-[calc(80vh-4rem)] overflow-y-auto md:max-h-none">
+                                <div className="space-y-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search words"
+                                            className="pl-9"
+                                        />
                                     </div>
 
-                                    {/* Topics Submenu */}
-                                    <AnimatePresence>
-                                        {expandedCourses[course.id] && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden ml-6 pl-2 border-l border-border/50 space-y-1"
-                                            >
-                                                {course.topics?.map(topic => (
-                                                    <button
-                                                        key={topic.id}
-                                                        onClick={(e) => handleSelectTopic(topic.id, course.id, e)}
-                                                        className={cn(
-                                                            "w-full text-left px-2 py-1.5 rounded-md text-xs transition-colors truncate flex items-center justify-between group",
-                                                            selectedTopic.toString() === topic.id.toString()
-                                                                ? "text-primary font-medium bg-primary/5"
-                                                                : "text-muted-foreground hover:text-foreground"
-                                                        )}
-                                                    >
-                                                        {topic.title}
-                                                        <span className="opacity-0 group-hover:opacity-100 text-[10px] bg-secondary px-1 rounded">{topic.studyItems?.length || 0}</span>
-                                                    </button>
-                                                ))}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </aside>
+                                    <Button
+                                        variant={selectedCourse === 'all' ? "secondary" : "ghost"}
+                                        onClick={() => handleSelectCourse('all')}
+                                        className="w-full justify-start"
+                                    >
+                                        All courses
+                                    </Button>
 
-            {/* --- Main Content --- */}
-            <main className="flex-1 space-y-6">
-
-                {/* Header (Desktop) */}
-                <div className="hidden md:flex items-center justify-between border-b border-border/40 pb-6">
-                    <div>
-                        <h1 className="text-3xl font-light tracking-tight text-foreground">Word Console</h1>
-                        <p className="text-muted-foreground font-light text-sm mt-1">
-                            {filteredItems.length} items found
-                        </p>
-                    </div>
-                    {/* Sort Dropdown could go here */}
-                </div>
-
-                {/* --- Mobile List View (Cards) --- */}
-                <div className="grid grid-cols-1 gap-4 md:hidden">
-                    {paginatedItems.map(item => (
-                        <div key={item.id} className="bg-card border border-border/50 rounded-xl p-4 shadow-sm space-y-3">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-lg font-medium">{item.primaryText}</h3>
-                                    <p className="text-sm text-muted-foreground">{item.secondaryText}</p>
-                                </div>
-                                <span className={cn("text-[10px] px-2 py-1 rounded-full font-medium border", getStatusColor(getSRSLevel(item.id)))}>
-                                    Lvl {getSRSLevel(item.id)}
-                                </span>
-                            </div>
-                            <div className="pt-2 border-t border-border/30">
-                                <p className="text-sm font-medium">{item.meaning}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{item.courseTitle} • {item.topicTitle}</p>
-                            </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button onClick={() => handleEditClick(item)} className="p-2 text-sm bg-secondary/50 rounded-lg text-foreground">Edit</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* --- Desktop Table View --- */}
-                <div className="hidden md:block rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden shadow-sm">
-                    <table className="w-full text-sm">
-                        <thead className="bg-secondary/20 border-b border-border/50">
-                            <tr>
-                                <th className="px-6 py-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-left w-32">Status</th>
-                                <th className="px-6 py-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-left">Term</th>
-                                <th className="px-6 py-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-left">Meaning</th>
-                                <th className="px-6 py-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-left w-48">Location</th>
-                                <th className="px-6 py-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/30">
-                            {paginatedItems.map(item => (
-                                <tr key={item.id} className="group hover:bg-secondary/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border", getStatusColor(getSRSLevel(item.id)))}>
-                                            <div className={cn("w-1.5 h-1.5 rounded-full bg-current")} />
-                                            Lvl {getSRSLevel(item.id)}
+                                    <div className="text-xs font-semibold uppercase text-muted-foreground px-1">Courses</div>
+                                    
+                                    {coursesLoading ? (
+                                        <div className="space-y-2">
+                                            {[1, 2, 3].map(i => (
+                                                <Skeleton key={i} className="h-8 w-full" />
+                                            ))}
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-foreground text-lg">{item.primaryText}</div>
-                                        <div className="text-muted-foreground text-xs font-mono">{item.secondaryText}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-foreground/90 font-medium">
-                                        {item.meaning}
-                                    </td>
-                                    <td className="px-6 py-4 text-xs text-muted-foreground">
-                                        <div className="line-clamp-1" title={item.courseTitle}>{item.courseTitle}</div>
-                                        <div className="line-clamp-1 opacity-60" title={item.topicTitle}>{item.topicTitle}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button
-                                            onClick={() => handleEditClick(item)}
-                                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            {courses.map(course => (
+                                                <div key={course.id} className="space-y-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => toggleCourse(course.id)} className="h-auto p-1">
+                                                            <ChevronRight className={cn("h-3 w-3 transition-transform", expandedCourses[course.id] && "rotate-90")} />
+                                                        </Button>
+                                                        <Button
+                                                            variant={selectedCourse.toString() === course.id.toString() && selectedTopic === 'all' ? "secondary" : "ghost"}
+                                                            onClick={() => handleSelectCourse(course.id)}
+                                                            className="flex-1 justify-start h-auto px-2 py-1 text-sm truncate"
+                                                        >
+                                                            {course.title}
+                                                        </Button>
+                                                    </div>
+                                                    {expandedCourses[course.id] && (
+                                                        <div className="ml-6 pl-2 border-l border-border/60 space-y-1">
+                                                            {course.topics.map(topic => (
+                                                                <Button
+                                                                    key={topic.id}
+                                                                    variant={selectedTopic.toString() === topic.id.toString() ? "secondary" : "ghost"}
+                                                                    onClick={(e) => handleSelectTopic(topic.id, course.id, e)}
+                                                                    className="w-full justify-start h-auto px-2 py-1 text-xs truncate"
+                                                                >
+                                                                    {topic.title}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </aside>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-2 pt-4">
-                        <button
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            className="p-2 rounded-lg border border-border/50 disabled:opacity-30 hover:bg-secondary transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                        </button>
-                        <span className="text-sm text-muted-foreground font-medium px-4">
-                            Page {currentPage} of {totalPages}
-                        </span>
-                        <button
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            className="p-2 rounded-lg border border-border/50 disabled:opacity-30 hover:bg-secondary transition-colors"
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                    </div>
-                )}
-            </main>
-
-            {/* Edit Modal (Reused Logic) */}
-            <AnimatePresence>
-                {editingItem && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
-                        <div className="bg-background w-full max-w-lg rounded-2xl border border-border shadow-2xl p-6 space-y-6 slide-in-from-bottom-10 animate-in duration-300">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-semibold">Edit Word</h2>
-                                <button onClick={() => setEditingItem(null)} className="p-1 hover:bg-secondary rounded-full"><X className="w-5 h-5" /></button>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium uppercase text-muted-foreground">Term</label>
-                                    <input
-                                        className="w-full p-3 bg-secondary/30 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 outline-none"
-                                        value={editForm.primaryText}
-                                        onChange={e => setEditForm(prev => ({ ...prev, primaryText: e.target.value }))}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium uppercase text-muted-foreground">Reading</label>
-                                    <input
-                                        className="w-full p-3 bg-secondary/30 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 outline-none"
-                                        value={editForm.secondaryText}
-                                        onChange={e => setEditForm(prev => ({ ...prev, secondaryText: e.target.value }))}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium uppercase text-muted-foreground">Meaning</label>
-                                    <input
-                                        className="w-full p-3 bg-secondary/30 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 outline-none"
-                                        value={editForm.meaning}
-                                        onChange={e => setEditForm(prev => ({ ...prev, meaning: e.target.value }))}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-3">
-                                <button onClick={() => setEditingItem(null)} className="px-4 py-2 text-sm font-medium">Cancel</button>
-                                <button onClick={handleSave} className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90">Save</button>
-                            </div>
+                    <main className="flex-1 space-y-6">
+                        <div className="flex flex-col sm:flex-row gap-3 md:hidden">
+                            <Button
+                                variant="outline"
+                                onClick={() => setMobileFiltersOpen(true)}
+                                className="flex-1"
+                            >
+                                <Filter className="mr-2 h-4 w-4" /> Filters
+                            </Button>
+                            <Button onClick={() => setShowAddForm(true)} disabled={!canAddItems} className="flex-1 gap-2">
+                                <Plus className="h-4 w-4" />
+                                Add word
+                            </Button>
                         </div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
-// Helper for status colors
-const getStatusColor = (level) => {
-    if (level === 0) return "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700";
-    if (level < 3) return "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
-    if (level < 5) return "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800";
-    return "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
+                        {/* Add/Edit Form */}
+                        {showAddForm && (
+                            <Card className="border-primary">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>{editingItem ? 'Edit word' : 'Add new word'}</CardTitle>
+                                        <Button variant="ghost" size="sm" onClick={closeForm}>
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="term">Japanese Term *</Label>
+                                            <Input
+                                                id="term"
+                                                value={formData.primaryText}
+                                                onChange={(e) => setFormData({ ...formData, primaryText: e.target.value })}
+                                                placeholder="e.g., こんにちは"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="reading">Reading (Optional)</Label>
+                                            <Input
+                                                id="reading"
+                                                value={formData.secondaryText}
+                                                onChange={(e) => setFormData({ ...formData, secondaryText: e.target.value })}
+                                                placeholder="e.g., konnichiwa"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="meaning">Meaning *</Label>
+                                        <Input
+                                            id="meaning"
+                                            value={formData.meaning}
+                                            onChange={(e) => setFormData({ ...formData, meaning: e.target.value })}
+                                            placeholder="e.g., Hello"
+                                        />
+                                    </div>
+                                    {!editingItem && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="topic">Topic *</Label>
+                                            <select
+                                                id="topic"
+                                                value={formData.topicId}
+                                                onChange={(e) => setFormData({ ...formData, topicId: e.target.value })}
+                                                className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                                            >
+                                                <option value="">Select a topic</option>
+                                                {courses.flatMap(course => 
+                                                    course.topics.map(topic => (
+                                                        <option key={topic.id} value={topic.id}>
+                                                            {course.title} - {topic.title}
+                                                        </option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 pt-2">
+                                        <Button onClick={editingItem ? handleEditItem : handleAddItem} className="flex-1">
+                                            <Check className="mr-2 h-4 w-4" />
+                                            {editingItem ? 'Update' : 'Add'}
+                                        </Button>
+                                        <Button variant="outline" onClick={closeForm} className="flex-1">
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {itemsLoading ? (
+                            <Card>
+                                <CardContent className="p-6 space-y-3">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <div key={i} className="flex gap-4">
+                                            <Skeleton className="h-4 w-1/4" />
+                                            <Skeleton className="h-4 w-1/3" />
+                                            <Skeleton className="h-4 w-1/6" />
+                                            <Skeleton className="h-4 w-1/6" />
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        ) : showEmptyState ? (
+                            <Card>
+                                <CardContent className="p-12 text-center">
+                                    <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                    <h3 className="text-lg font-semibold mb-2">Select a course or topic</h3>
+                                    <p className="text-muted-foreground">Choose from the sidebar to view vocabulary items</p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <>
+                                <Card>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-secondary/40">
+                                                <tr className="border-b">
+                                                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-foreground">Term</th>
+                                                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-foreground">Meaning</th>
+                                                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-foreground hidden md:table-cell">Course</th>
+                                                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-foreground hidden lg:table-cell">Topic</th>
+                                                    <th className="px-3 sm:px-4 py-3 text-right font-semibold text-foreground">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {paginatedItems.map(item => (
+                                                    <tr key={item.id} className="hover:bg-secondary/40 transition-colors">
+                                                        <td className="px-3 sm:px-4 py-3 font-medium">{item.primaryText}</td>
+                                                        <td className="px-3 sm:px-4 py-3 text-muted-foreground">{item.meaning}</td>
+                                                        <td className="px-3 sm:px-4 py-3 text-muted-foreground hidden md:table-cell">
+                                                            <Badge variant="outline" className="text-xs">{item.courseTitle}</Badge>
+                                                        </td>
+                                                        <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">{item.topicTitle}</td>
+                                                        <td className="px-3 sm:px-4 py-3">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm"
+                                                                    onClick={() => openEditForm(item)}
+                                                                    className="h-8 w-8 p-0"
+                                                                >
+                                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteItem(item.id)}
+                                                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card>
+
+                                {filteredItems.length === 0 && (
+                                    <Card>
+                                        <CardContent className="p-8 text-center text-muted-foreground">
+                                            No items match your search.
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {totalPages > 1 && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Previous
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </main>
+                </div>
+        </PageShell>
+    );
 };
 
 export default WordConsole;

@@ -1,9 +1,13 @@
 import React, { useEffect, useRef } from 'react';
+import { useAnimationsEnabled } from '@/hooks/useAnimationsEnabled';
 
 const InteractiveDotGrid = () => {
     const canvasRef = useRef(null);
+    const animationsEnabled = useAnimationsEnabled();
 
     useEffect(() => {
+        if (!animationsEnabled) return;
+
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         let animationFrameId;
@@ -95,7 +99,9 @@ const InteractiveDotGrid = () => {
             window.removeEventListener('mouseleave', handleMouseLeave);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [animationsEnabled]);
+
+    if (!animationsEnabled) return null;
 
     return (
         <canvas

@@ -1,7 +1,6 @@
 import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, RotateCcw, Keyboard, MousePointer2, ArrowLeft, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TestSetup from '@/components/TestSetup';
@@ -33,14 +32,14 @@ export default function StudySession() {
         if (topicId === 'test') return;
 
         setElapsedSeconds(0);
-        api.post('/study/session/start?userId=1')
+        api.post('/study/session/start')
             .then(res => setSessionId(res.data.id))
             .catch(err => console.error("Failed to start session:", err));
 
         const fetchUrl = topicId === 'review'
-            ? '/study/items/due?userId=1'
+            ? '/study/items/due'
             : topicId === 'daily'
-                ? '/study/daily/cards?userId=1&count=30' // Assuming this exists or I map it? StudyController didn't show daily. I'll stick to items/due or similar if daily missing.
+                ? '/study/items/due'
                 : `/study/items/topic/${topicId}`;
 
         api.get(fetchUrl)
@@ -158,8 +157,9 @@ export default function StudySession() {
     const handleTypingSubmit = (e) => {
         e.preventDefault();
         const input = typingInput.trim().toLowerCase();
-        // Check against displayed reading (smart handled)
-        const matchReading = displayCurrent.reading?.toLowerCase() === input;
+        // Check against the actual reading field (secondaryText or primaryText reading)
+        const correctAnswer = (currentItem.secondaryText || currentItem.reading || '').toLowerCase();
+        const matchReading = correctAnswer === input;
         handleNext(matchReading);
     };
 
@@ -286,173 +286,141 @@ export default function StudySession() {
     const progress = ((currentIndex) / items.length) * 100;
 
     return (
-        <div className="max-w-2xl mx-auto px-4 pb-20 animate-in fade-in duration-300">
-            {/* Top Bar */}
-            <div className="flex items-center justify-between py-4 mb-6">
-                <Link to="/courses" className="p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors">
-                    <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-                </Link>
+        <div className="pb-20">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+                {/* Top Bar */}
+                <div className="flex items-center justify-between py-4 mb-6 border-b">
+                    <Link to="/courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">Back</span>
+                    </Link>
 
-                <div className="flex items-center gap-3 text-sm">
-                    <span className="text-muted-foreground">
-                        {currentIndex + 1} / {items.length}
-                    </span>
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span className={cn(
-                            "font-mono",
-                            timeLeft !== null && timeLeft < 30 && "text-destructive"
-                        )}>
-                            {formatTime(timeLeft !== null ? timeLeft : elapsedSeconds)}
-                        </span>
+                    <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
+                            <span className="font-medium text-foreground">
+                                {currentIndex + 1}
+                            </span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-muted-foreground">
+                                {items.length}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span className={cn(
+                                "font-mono font-medium",
+                                timeLeft !== null && timeLeft < 30 ? "text-destructive" : "text-foreground"
+                            )}>
+                                {formatTime(timeLeft !== null ? timeLeft : elapsedSeconds)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Mode Toggle */}
+                    <div className="flex gap-1 p-1 rounded-lg bg-secondary">
+                        {[
+                            { id: 'flashcard', icon: RotateCcw, label: 'Cards' },
+                            { id: 'quiz', icon: MousePointer2, label: 'Quiz' },
+                            { id: 'typing', icon: Keyboard, label: 'Type' }
+                        ].map(m => (
+                            <button
+                                key={m.id}
+                                onClick={() => setMode(m.id)}
+                                className={cn(
+                                    "p-2 rounded-md transition-all",
+                                    mode === m.id
+                                        ? "bg-background shadow-sm text-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                                title={m.label}
+                            >
+                                <m.icon className="w-4 h-4" />
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Mode Toggle */}
-                <div className="flex gap-1 p-1 rounded-lg bg-secondary/50">
-                    {[
-                        { id: 'flashcard', icon: RotateCcw, label: 'Cards' },
-                        { id: 'quiz', icon: MousePointer2, label: 'Quiz' },
-                        { id: 'typing', icon: Keyboard, label: 'Type' }
-                    ].map(m => (
-                        <button
-                            key={m.id}
-                            onClick={() => setMode(m.id)}
-                            className={cn(
-                                "p-2 rounded-md transition-all",
-                                mode === m.id
-                                    ? "bg-background shadow-sm text-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                            title={m.label}
-                        >
-                            <m.icon className="w-4 h-4" />
-                        </button>
-                    ))}
+                {/* Progress Bar */}
+                <div className="h-2 bg-secondary rounded-full mb-8 overflow-hidden">
+                    <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                    />
                 </div>
-            </div>
 
-            {/* Progress Bar */}
-            <div className="h-1 bg-secondary rounded-full mb-8 overflow-hidden">
-                <motion.div
-                    className="h-full bg-primary"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3 }}
-                />
-            </div>
-
-            {/* Main Content */}
-            <AnimatePresence mode="wait">
+                {/* Main Content */}
                 {mode === 'flashcard' && (
-                    <motion.div
-                        key={`flashcard-${currentIndex}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-8"
-                    >
-                        {/* Card */}
+                    <div className="space-y-6">
                         <div
                             className={cn(
-                                "relative min-h-[400px] rounded-3xl p-8 cursor-pointer transition-all duration-300",
-                                "bg-card border-2",
-                                feedback === 'correct' && "border-green-500 bg-green-500/5",
-                                feedback === 'incorrect' && "border-destructive bg-destructive/5",
-                                !feedback && "border-border hover:border-border/80 hover:shadow-lg"
+                                "relative min-h-[400px] rounded-2xl p-8 sm:p-12 cursor-pointer border-2 transition-all",
+                                feedback === 'correct' && "border-green-500 bg-green-50/50",
+                                feedback === 'incorrect' && "border-red-500 bg-red-50/50",
+                                !feedback && "border-border hover:border-primary/50 hover:shadow-lg bg-card"
                             )}
                             onClick={() => !feedback && setIsFlipped(!isFlipped)}
                         >
-                            <AnimatePresence mode="wait">
-                                {!isFlipped ? (
-                                    <motion.div
-                                        key="front"
-                                        initial={{ opacity: 0, rotateY: -10 }}
-                                        animate={{ opacity: 1, rotateY: 0 }}
-                                        exit={{ opacity: 0, rotateY: 10 }}
-                                        className="h-full flex flex-col items-center justify-center text-center min-h-[350px]"
-                                    >
-                                        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-6">Term</span>
-                                        <h2 className={cn("font-medium text-foreground leading-tight", getTextSize(displayCurrent.term))}>
-                                            <Furigana
-                                                text={displayCurrent.term}
-                                                reading={displayCurrent.reading}
-                                                show={settings.showFurigana}
-                                            />
-                                        </h2>
-                                        <p className="mt-auto text-sm text-muted-foreground">Tap to reveal answer</p>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="back"
-                                        initial={{ opacity: 0, rotateY: 10 }}
-                                        animate={{ opacity: 1, rotateY: 0 }}
-                                        exit={{ opacity: 0, rotateY: -10 }}
-                                        className="h-full flex flex-col items-center justify-center text-center min-h-[350px] space-y-6"
-                                    >
-                                        {/* Reading */}
-                                        <div className="space-y-2">
-                                            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Reading</span>
-                                            <p className={cn("text-foreground/80", getTextSize(currentItem.secondaryText, 'medium'))}>
-                                                {currentItem.secondaryText || '—'}
-                                            </p>
-                                        </div>
+                            {!isFlipped ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px]">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground mb-8">Term</span>
+                                    <h2 className={cn("font-bold text-foreground leading-tight", getTextSize(displayCurrent.term))}>
+                                        <Furigana
+                                            text={displayCurrent.term}
+                                            reading={displayCurrent.reading}
+                                            show={settings.showFurigana}
+                                        />
+                                    </h2>
+                                    <p className="mt-auto text-sm text-muted-foreground">Click or press Space to reveal</p>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px] space-y-8">
+                                    <div className="space-y-3">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Reading</span>
+                                        <p className={cn("text-foreground", getTextSize(currentItem.secondaryText, 'medium'))}>
+                                            {currentItem.secondaryText || '—'}
+                                        </p>
+                                    </div>
 
-                                        <div className="w-16 h-px bg-border" />
+                                    <div className="w-20 h-px bg-border" />
 
-                                        {/* Meaning */}
-                                        <div className="space-y-2">
-                                            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Meaning</span>
-                                            <p className={cn("text-foreground font-medium", getTextSize(currentItem.meaning, 'medium'))}>
-                                                {currentItem.meaning}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                                    <div className="space-y-3">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Meaning</span>
+                                        <p className={cn("text-foreground font-semibold", getTextSize(currentItem.meaning, 'medium'))}>
+                                            {currentItem.meaning}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Controls - Only show when flipped */}
                         {isFlipped && !feedback && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex justify-center gap-6"
-                            >
+                            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                                 <button
                                     onClick={() => handleNext(false)}
-                                    className="flex items-center gap-2 px-8 py-4 rounded-2xl border-2 border-destructive/30 text-destructive hover:bg-destructive hover:text-white hover:border-destructive transition-all text-lg font-medium"
+                                    className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all font-medium"
                                 >
                                     <X className="w-5 h-5" />
                                     Again
                                 </button>
                                 <button
                                     onClick={() => handleNext(true)}
-                                    className="flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary text-primary-foreground hover:opacity-90 transition-all text-lg font-medium"
+                                    className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all font-medium shadow-lg shadow-primary/20"
                                 >
                                     <Check className="w-5 h-5" />
                                     Got it
                                 </button>
-                            </motion.div>
+                            </div>
                         )}
-                    </motion.div>
+                    </div>
                 )}
 
                 {mode === 'quiz' && (
-                    <motion.div
-                        key={`quiz-${currentIndex}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-8"
-                    >
-                        {/* Question */}
+                    <div className="space-y-8">
                         <div className="text-center space-y-4 py-8">
-                            {/* Hint if reverse */}
                             {quizDirection === 'reverse' && (
-                                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Select the Japanese Term</span>
+                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Select the Japanese Term</span>
                             )}
-                            <h2 className={cn("font-medium", getTextSize(quizDirection === 'reverse' ? displayCurrent.english : displayCurrent.term))}>
+                            <h2 className={cn("font-bold", getTextSize(quizDirection === 'reverse' ? displayCurrent.english : displayCurrent.term))}>
                                 {quizDirection === 'reverse' ? (
                                     displayCurrent.english
                                 ) : (
@@ -463,59 +431,47 @@ export default function StudySession() {
                                     />
                                 )}
                             </h2>
-                            {/* If Forward, reading is already shown in furigana, but keep this for non-furigana backup */}
-                            {quizDirection === 'forward' && displayCurrent.reading && (
-                                <p className="text-muted-foreground text-lg opacity-0">{displayCurrent.reading}</p>
-                            )}
                         </div>
 
-                        {/* Options */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {quizOptions.map((option, idx) => {
                                 const optContent = getDisplayContent(option);
+                                const isCorrect = option.id === currentItem.id;
                                 return (
                                     <button
                                         key={option.id}
                                         disabled={feedback !== null}
-                                        onClick={() => handleNext(option.id === currentItem.id)}
+                                        onClick={() => handleNext(isCorrect)}
                                         className={cn(
-                                            "p-5 rounded-2xl border-2 text-left transition-all",
-                                            "hover:border-primary/50 hover:bg-primary/5",
-                                            "disabled:opacity-60 disabled:cursor-not-allowed",
-                                            "border-border bg-card",
-                                            // Highlight correct/incorrect if feedback active
-                                            feedback === 'correct' && option.id === currentItem.id && "border-green-500 bg-green-500/10",
-                                            feedback === 'incorrect' && option.id === currentItem.id && "border-green-500 bg-green-500/10",
-                                            feedback === 'incorrect' && option.id !== currentItem.id && "opacity-50"
+                                            "p-5 rounded-xl border-2 text-left transition-all",
+                                            feedback === null && "hover:border-primary hover:shadow-lg bg-card",
+                                            feedback === 'correct' && isCorrect && "border-green-500 bg-green-50",
+                                            feedback === 'incorrect' && isCorrect && "border-green-500 bg-green-50",
+                                            feedback === 'incorrect' && !isCorrect && "opacity-50",
+                                            !feedback && "border-border"
                                         )}
                                     >
-                                        <span className="text-xs text-muted-foreground mb-1 block">{idx + 1}</span>
+                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-secondary text-xs font-medium text-muted-foreground mb-2">{idx + 1}</span>
                                         {quizDirection === 'reverse' ? (
                                             <div>
-                                                <span className="font-medium text-lg">{optContent.term}</span>
-                                                {optContent.reading && <div className="text-xs text-muted-foreground">{optContent.reading}</div>}
+                                                <span className="font-semibold text-lg block">{optContent.term}</span>
+                                                {optContent.reading && <div className="text-sm text-muted-foreground mt-1">{optContent.reading}</div>}
                                             </div>
                                         ) : (
-                                            <span className="font-medium">{optContent.english}</span>
+                                            <span className="font-semibold">{optContent.english}</span>
                                         )}
                                     </button>
                                 );
                             })}
                         </div>
-                    </motion.div>
+                    </div>
                 )}
 
                 {mode === 'typing' && (
-                    <motion.div
-                        key={`typing-${currentIndex}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-8"
-                    >
+                    <div className="space-y-8">
                         <div className="text-center space-y-4 py-8">
-                            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Type the reading</span>
-                            <h2 className={cn("font-medium", getTextSize(displayCurrent.term))}>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Type the reading</span>
+                            <h2 className={cn("font-bold", getTextSize(displayCurrent.term))}>
                                 {displayCurrent.term}
                             </h2>
                             <p className="text-muted-foreground text-lg italic">{displayCurrent.english}</p>
@@ -527,10 +483,10 @@ export default function StudySession() {
                                 value={typingInput}
                                 onChange={e => setTypingInput(e.target.value)}
                                 className={cn(
-                                    "w-full text-center text-3xl p-4 rounded-2xl border-2 transition-all",
-                                    "bg-card focus:outline-none focus:border-primary",
-                                    feedback === 'correct' && "border-green-500 bg-green-500/5",
-                                    feedback === 'incorrect' && "border-destructive bg-destructive/5",
+                                    "w-full text-center text-2xl sm:text-3xl p-4 sm:p-6 rounded-xl border-2 transition-all",
+                                    "bg-card focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
+                                    feedback === 'correct' && "border-green-500 bg-green-50",
+                                    feedback === 'incorrect' && "border-red-500 bg-red-50",
                                     !feedback && "border-border"
                                 )}
                                 placeholder="Type here..."
@@ -539,12 +495,11 @@ export default function StudySession() {
                                 autoCapitalize="off"
                             />
                         </form>
-                    </motion.div>
+                    </div>
                 )}
-            </AnimatePresence>
+            </div>
         </div>
     );
 }
-
 
 
