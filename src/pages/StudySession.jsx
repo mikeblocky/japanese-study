@@ -157,10 +157,11 @@ export default function StudySession() {
     const handleTypingSubmit = (e) => {
         e.preventDefault();
         const input = typingInput.trim().toLowerCase();
-        // Check against the actual reading field (secondaryText or primaryText reading)
-        const correctAnswer = (currentItem.secondaryText || currentItem.reading || '').toLowerCase();
-        const matchReading = correctAnswer === input;
-        handleNext(matchReading);
+        // Check against the English meaning
+        const correctAnswer = (displayCurrent.english || currentItem.meaning || '').toLowerCase();
+        // Allow partial match for longer answers or exact match
+        const isCorrect = correctAnswer.includes(input) || input.includes(correctAnswer) || correctAnswer === input;
+        handleNext(isCorrect && input.length > 0);
     };
 
     const handleTestStart = async (config) => {
@@ -375,18 +376,18 @@ export default function StudySession() {
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px] space-y-8">
                                     <div className="space-y-3">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Reading</span>
-                                        <p className={cn("text-foreground", getTextSize(currentItem.secondaryText, 'medium'))}>
-                                            {currentItem.secondaryText || '—'}
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Meaning</span>
+                                        <p className={cn("text-foreground font-semibold", getTextSize(displayCurrent.english, 'medium'))}>
+                                            {displayCurrent.english || '—'}
                                         </p>
                                     </div>
 
                                     <div className="w-20 h-px bg-border" />
 
                                     <div className="space-y-3">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Meaning</span>
-                                        <p className={cn("text-foreground font-semibold", getTextSize(currentItem.meaning, 'medium'))}>
-                                            {currentItem.meaning}
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Reading</span>
+                                        <p className={cn("text-foreground", getTextSize(displayCurrent.reading, 'medium'))}>
+                                            {displayCurrent.reading || '—'}
                                         </p>
                                     </div>
                                 </div>
@@ -470,11 +471,17 @@ export default function StudySession() {
                 {mode === 'typing' && (
                     <div className="space-y-8">
                         <div className="text-center space-y-4 py-8">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Type the reading</span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Type the meaning</span>
                             <h2 className={cn("font-bold", getTextSize(displayCurrent.term))}>
-                                {displayCurrent.term}
+                                <Furigana
+                                    text={displayCurrent.term}
+                                    reading={displayCurrent.reading}
+                                    show={settings.showFurigana}
+                                />
                             </h2>
-                            <p className="text-muted-foreground text-lg italic">{displayCurrent.english}</p>
+                            {displayCurrent.reading && (
+                                <p className="text-muted-foreground text-lg">{displayCurrent.reading}</p>
+                            )}
                         </div>
 
                         <form onSubmit={handleTypingSubmit} className="max-w-md mx-auto">
