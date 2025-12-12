@@ -249,7 +249,7 @@ export default function ManagementPage() {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 },
-                timeout: 120000, // 2 minute timeout
+                timeout: 300000, // 5 minute timeout (for Render free tier cold starts)
                 onUploadProgress: (progressEvent) => {
                     const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setImportProgress(`Uploading... ${percentCompleted}%`);
@@ -290,8 +290,8 @@ export default function ManagementPage() {
             let technicalDetails = '';
             
             if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-                errorMessage += 'Import timed out. The deck might be too large. Try splitting it into smaller decks.';
-                technicalDetails = 'Timeout after 120 seconds';
+                errorMessage += 'Import timed out after 5 minutes. This usually means Render free tier is sleeping or overloaded. Try again in 1-2 minutes after the service wakes up.';
+                technicalDetails = 'Timeout after 300 seconds';
             } else if (err.response?.status === 500) {
                 errorMessage += 'Server error occurred. The backend service might still be starting up (Render free tier can take 1-2 minutes to wake up). Please wait a moment and try again.';
                 technicalDetails = err.response?.data?.error || err.response?.data?.message || 'Internal server error';
