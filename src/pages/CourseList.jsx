@@ -69,9 +69,9 @@ export default function CourseList() {
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {courses.map((course, i) => (
-                    <Link key={course.id} to={`/courses/${course.id}`}>
-                        <Card className="hover:shadow-md hover:border-primary/50 transition-all group cursor-pointer h-full overflow-hidden">
-                            <CardHeader>
+                    <Link key={course.id} to={`/courses/${course.id}`} className="block w-full">
+                        <Card className="hover:shadow-md hover:border-primary/50 transition-all group cursor-pointer h-full overflow-hidden w-full">
+                            <CardHeader className="w-full">
                                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                                     <Badge variant="secondary">Level {i === 0 ? 'N5' : 'N4'}</Badge>
                                     <Badge variant="outline" className="text-xs">
@@ -80,9 +80,12 @@ export default function CourseList() {
                                     </Badge>
                                     <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all ml-auto flex-shrink-0" />
                                 </div>
-                                <CardTitle className="group-hover:text-primary transition-colors mb-2 text-base leading-snug" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                <h3 
+                                    className="group-hover:text-primary transition-colors mb-2 text-base font-semibold leading-snug w-full"
+                                    style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', hyphens: 'auto' }}
+                                >
                                     {course.title}
-                                </CardTitle>
+                                </h3>
                                 <CardDescription className="line-clamp-2">{course.description}</CardDescription>
                             </CardHeader>
                         </Card>
