@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, PlayCircle } from 'lucide-react';
-import { PageShell, PageHeader } from '@/components/ui/page';
+import { PageShell } from '@/components/ui/page';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,10 +50,14 @@ export default function CourseDetail() {
                 </Link>
             </Button>
 
-            <PageHeader
-                title={course?.title || `Course ${courseId}`}
-                description={course?.description || 'Select a lesson to start studying.'}
-            />
+            <div className="space-y-1.5 sm:space-y-3 mb-6 sm:mb-8">
+                <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground break-anywhere">
+                    {course?.title || `Course ${courseId}`}
+                </h1>
+                <p className="text-sm sm:text-lg text-muted-foreground">
+                    {course?.description || 'Select a lesson to start studying.'}
+                </p>
+            </div>
 
             <Card>
                 <CardContent className="p-6">
@@ -73,8 +77,8 @@ export default function CourseDetail() {
                                 <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary font-mono text-sm font-semibold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                     {String(i + 1).padStart(2, '0')}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium group-hover:text-primary transition-colors">{topic.title}</p>
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                    <p className="font-medium group-hover:text-primary transition-colors break-anywhere line-clamp-1">{topic.title}</p>
                                     <p className="text-sm text-muted-foreground line-clamp-1">{topic.description || 'No description provided.'}</p>
                                 </div>
                                 <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
