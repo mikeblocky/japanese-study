@@ -337,7 +337,7 @@ export default function ManagementPage() {
             />
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6 border-b">
+            <div className="flex gap-1 sm:gap-2 mb-6 border-b overflow-x-auto">
                 {tabs.map(tab => {
                     const Icon = tab.icon;
                     return (
@@ -345,14 +345,15 @@ export default function ManagementPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
-                                "flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors",
+                                "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base font-medium border-b-2 transition-colors whitespace-nowrap",
                                 activeTab === tab.id
                                     ? "border-primary text-primary"
                                     : "border-transparent text-muted-foreground hover:text-foreground"
                             )}
                         >
                             <Icon className="h-4 w-4" />
-                            {tab.label}
+                            <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                            <span className="xs:hidden sm:hidden">{tab.label.split(' ')[0]}</span>
                         </button>
                     );
                 })}
@@ -361,9 +362,9 @@ export default function ManagementPage() {
             {/* Courses Tab */}
             {activeTab === 'courses' && (
                 <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-semibold">Course Management</h2>
-                        <Button onClick={() => setShowCourseForm(true)} className="gap-2">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+                        <h2 className="text-lg sm:text-xl font-semibold">Course Management</h2>
+                        <Button onClick={() => setShowCourseForm(true)} className="gap-2 w-full sm:w-auto">
                             <Plus className="h-4 w-4" />
                             Add course
                         </Button>
@@ -426,21 +427,21 @@ export default function ManagementPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {courses.map(course => (
-                            <Card key={course.id} className="hover:shadow-md transition-all">
-                                <CardHeader>
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <CardTitle className="flex items-center gap-2">
-                                                {course.title}
-                                                <Badge variant="secondary" className="text-xs">
+                            <Card key={course.id} className="hover:shadow-md transition-all overflow-hidden">
+                                <CardHeader className="p-4 sm:p-6">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                <span className="font-semibold text-base break-anywhere">{course.title}</span>
+                                                <Badge variant="secondary" className="text-xs shrink-0">
                                                     {course.level || 'beginner'}
                                                 </Badge>
-                                            </CardTitle>
-                                            <CardDescription className="mt-1">
+                                            </div>
+                                            <CardDescription className="mt-1 line-clamp-2">
                                                 {course.description || 'No description'}
                                             </CardDescription>
                                         </div>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-1 shrink-0">
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm"
@@ -504,20 +505,20 @@ export default function ManagementPage() {
 
                     {/* Course selector */}
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="p-4 sm:p-6">
                             <CardTitle className="text-base">Select a course</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                 {courses.map(course => (
                                     <Button
                                         key={course.id}
                                         variant={selectedCourse?.id === course.id ? "default" : "outline"}
                                         onClick={() => setSelectedCourse(course)}
-                                        className="justify-start"
+                                        className="justify-start h-auto py-2 px-3 text-left"
                                     >
-                                        <FolderOpen className="mr-2 h-4 w-4" />
-                                        {course.title}
+                                        <FolderOpen className="mr-2 h-4 w-4 shrink-0" />
+                                        <span className="truncate">{course.title}</span>
                                     </Button>
                                 ))}
                             </div>
