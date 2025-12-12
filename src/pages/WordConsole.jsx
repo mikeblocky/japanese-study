@@ -216,7 +216,7 @@ const WordConsole = () => {
             setItems(items.filter(item => item.id !== itemId));
         } catch (err) {
             console.error('Failed to delete item', err);
-            alert('Failed to delete item. Please try again.');
+            alert('Failed to delete item: ' + (err.response?.data?.message || err.message));
         }
     };
 

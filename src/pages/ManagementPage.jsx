@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, BookOpen, List, Upload, Edit2, Trash2, X, Check, FolderOpen } from 'lucide-react';
+import { Plus, BookOpen, List, Upload, Edit2, Trash2, X, Check, FolderOpen, FileText } from 'lucide-react';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,6 +41,14 @@ export default function ManagementPage() {
     const [ankiResult, setAnkiResult] = useState(null);
     const [importProgress, setImportProgress] = useState(null);
 
+    // Quick add words state
+    const [quickAddCourse, setQuickAddCourse] = useState('');
+    const [quickAddTopic, setQuickAddTopic] = useState('');
+    const [quickAddTopics, setQuickAddTopics] = useState([]);
+    const [quickWordData, setQuickWordData] = useState({ primaryText: '', secondaryText: '', meaning: '' });
+    const [recentlyAdded, setRecentlyAdded] = useState([]);
+    const [deleteLoading, setDeleteLoading] = useState(null);
+
     useEffect(() => {
         loadCourses();
     }, []);
@@ -50,6 +58,18 @@ export default function ManagementPage() {
             loadTopics(selectedCourse.id);
         }
     }, [selectedCourse]);
+
+    // Load topics for quick add when course selected
+    useEffect(() => {
+        if (quickAddCourse) {
+            api.get(`/courses/${quickAddCourse}/topics`)
+                .then(res => setQuickAddTopics(res.data || []))
+                .catch(() => setQuickAddTopics([]));
+        } else {
+            setQuickAddTopics([]);
+            setQuickAddTopic('');
+        }
+    }, [quickAddCourse]);
 
     const loadCourses = async () => {
         try {
@@ -106,6 +126,7 @@ export default function ManagementPage() {
     const handleDeleteCourse = async (courseId) => {
         if (!confirm('Are you sure you want to delete this course? All lessons and words will be deleted.')) return;
         try {
+            setDeleteLoading(`course-${courseId}`);
             await api.delete(`/courses/${courseId}`);
             loadCourses();
             if (selectedCourse?.id === courseId) {
@@ -114,7 +135,9 @@ export default function ManagementPage() {
             }
         } catch (err) {
             console.error('Failed to delete course', err);
-            alert('Failed to delete course. Please try again.');
+            alert('Failed to delete course: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setDeleteLoading(null);
         }
     };
 
@@ -180,13 +203,16 @@ export default function ManagementPage() {
     const handleDeleteTopic = async (topicId) => {
         if (!confirm('Are you sure you want to delete this lesson? All words will be deleted.')) return;
         try {
+            setDeleteLoading(`topic-${topicId}`);
             await api.delete(`/topics/${topicId}`);
             if (selectedCourse) {
                 loadTopics(selectedCourse.id);
             }
         } catch (err) {
             console.error('Failed to delete topic', err);
-            alert('Failed to delete topic. Please try again.');
+            alert('Failed to delete lesson: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setDeleteLoading(null);
         }
     };
 
@@ -326,8 +352,58 @@ export default function ManagementPage() {
     const tabs = [
         { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'lessons', label: 'Lessons', icon: List },
-        { id: 'import', label: 'Import Anki', icon: Upload }
+        { id: 'words', label: 'Quick Add', icon: FileText },
+        { id: 'import', label: 'Import', icon: Upload }
     ];
+
+    // Quick add word handler
+    const handleQuickAddWord = async () => {
+        if (!quickAddTopic) {
+            alert('Please select a lesson first');
+            return;
+        }
+        if (!quickWordData.primaryText || !quickWordData.meaning) {
+            alert('Please fill in the Japanese term and meaning');
+            return;
+        }
+        try {
+            const res = await api.post(`/topics/${quickAddTopic}/items`, {
+                primaryText: quickWordData.primaryText,
+                secondaryText: quickWordData.secondaryText || '',
+                meaning: quickWordData.meaning
+            });
+            // Add to recently added list
+            const topic = quickAddTopics.find(t => t.id.toString() === quickAddTopic);
+            const course = courses.find(c => c.id.toString() === quickAddCourse);
+            setRecentlyAdded(prev => [{
+                ...res.data,
+                topicTitle: topic?.title,
+                courseTitle: course?.title,
+                id: res.data?.id || Date.now()
+            }, ...prev].slice(0, 10));
+            // Clear form but keep course/topic selected
+            setQuickWordData({ primaryText: '', secondaryText: '', meaning: '' });
+            // Focus back to first input
+            document.getElementById('quick-word')?.focus();
+        } catch (err) {
+            console.error('Failed to add word', err);
+            alert('Failed to add word: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
+    const handleDeleteRecentWord = async (itemId) => {
+        if (!confirm('Delete this word?')) return;
+        try {
+            setDeleteLoading(`word-${itemId}`);
+            await api.delete(`/items/${itemId}`);
+            setRecentlyAdded(prev => prev.filter(w => w.id !== itemId));
+        } catch (err) {
+            console.error('Failed to delete word', err);
+            alert('Failed to delete: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setDeleteLoading(null);
+        }
+    };
 
     return (
         <PageShell>
@@ -454,9 +530,14 @@ export default function ManagementPage() {
                                                 variant="ghost" 
                                                 size="sm"
                                                 onClick={() => handleDeleteCourse(course.id)}
+                                                disabled={deleteLoading === `course-${course.id}`}
                                                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
+                                                {deleteLoading === `course-${course.id}` ? (
+                                                    <div className="h-3.5 w-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                )}
                                             </Button>
                                         </div>
                                     </div>
@@ -630,9 +711,14 @@ export default function ManagementPage() {
                                                     variant="ghost" 
                                                     size="sm"
                                                     onClick={() => handleDeleteTopic(topic.id)}
+                                                    disabled={deleteLoading === `topic-${topic.id}`}
                                                     className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    {deleteLoading === `topic-${topic.id}` ? (
+                                                        <div className="h-3.5 w-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    )}
                                                 </Button>
                                             </div>
                                         </div>
@@ -655,6 +741,141 @@ export default function ManagementPage() {
                             </CardContent>
                         </Card>
                     )}
+                </div>
+            )}
+
+            {/* Quick Add Words Tab */}
+            {activeTab === 'words' && (
+                <div className="space-y-6">
+                    <h2 className="text-xl font-semibold">Quick Add Words</h2>
+                    <p className="text-muted-foreground text-sm -mt-4">Add vocabulary words quickly without leaving this page</p>
+
+                    <Card className="border-primary">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Add New Word</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Course</Label>
+                                    <select
+                                        value={quickAddCourse}
+                                        onChange={(e) => setQuickAddCourse(e.target.value)}
+                                        className="w-full h-9 px-3 text-sm rounded-md border border-input bg-background"
+                                    >
+                                        <option value="">Select course...</option>
+                                        {courses.map(c => (
+                                            <option key={c.id} value={c.id}>{c.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Lesson</Label>
+                                    <select
+                                        value={quickAddTopic}
+                                        onChange={(e) => setQuickAddTopic(e.target.value)}
+                                        disabled={!quickAddCourse}
+                                        className="w-full h-9 px-3 text-sm rounded-md border border-input bg-background disabled:opacity-50"
+                                    >
+                                        <option value="">Select lesson...</option>
+                                        {quickAddTopics.map(t => (
+                                            <option key={t.id} value={t.id}>{t.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="quick-word" className="text-xs">Japanese *</Label>
+                                    <Input
+                                        id="quick-word"
+                                        value={quickWordData.primaryText}
+                                        onChange={(e) => setQuickWordData({ ...quickWordData, primaryText: e.target.value })}
+                                        placeholder="こんにちは"
+                                        className="h-9"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleQuickAddWord()}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Reading</Label>
+                                    <Input
+                                        value={quickWordData.secondaryText}
+                                        onChange={(e) => setQuickWordData({ ...quickWordData, secondaryText: e.target.value })}
+                                        placeholder="konnichiwa"
+                                        className="h-9"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleQuickAddWord()}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Meaning *</Label>
+                                    <Input
+                                        value={quickWordData.meaning}
+                                        onChange={(e) => setQuickWordData({ ...quickWordData, meaning: e.target.value })}
+                                        placeholder="Hello"
+                                        className="h-9"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleQuickAddWord()}
+                                    />
+                                </div>
+                            </div>
+
+                            <Button 
+                                onClick={handleQuickAddWord} 
+                                disabled={!quickAddTopic || !quickWordData.primaryText || !quickWordData.meaning}
+                                className="w-full sm:w-auto"
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Word
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {recentlyAdded.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base">Recently Added</CardTitle>
+                                    <Badge variant="secondary">{recentlyAdded.length}</Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    {recentlyAdded.map(word => (
+                                        <div key={word.id} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/30 text-sm">
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-medium">{word.primaryText}</span>
+                                                {word.secondaryText && (
+                                                    <span className="text-muted-foreground ml-2">({word.secondaryText})</span>
+                                                )}
+                                                <span className="text-muted-foreground mx-2">→</span>
+                                                <span>{word.meaning}</span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground shrink-0 hidden sm:block">
+                                                {word.courseTitle} / {word.topicTitle}
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDeleteRecentWord(word.id)}
+                                                disabled={deleteLoading === `word-${word.id}`}
+                                                className="h-7 w-7 p-0 text-destructive hover:text-destructive shrink-0"
+                                            >
+                                                {deleteLoading === `word-${word.id}` ? (
+                                                    <div className="h-3 w-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    <div className="text-center text-sm text-muted-foreground">
+                        <p>For bulk management, use the <button onClick={() => window.location.href = '/console'} className="text-primary hover:underline">Word Console</button></p>
+                    </div>
                 </div>
             )}
 
