@@ -603,12 +603,12 @@ export default function ManagementPage() {
 
                     {selectedCourse && topics.length > 0 && (
                         <div className="space-y-3">
-                            {topics.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map(topic => (
+                            {topics.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map((topic, i) => (
                                 <Card key={topic.id} className="hover:bg-accent transition-colors">
                                     <CardContent className="p-4">
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary font-mono text-sm font-semibold shrink-0">
-                                                {String(topic.orderIndex || 0).padStart(2, '0')}
+                                                {String(i + 1).padStart(2, '0')}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium">{topic.title}</p>
