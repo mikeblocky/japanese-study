@@ -287,25 +287,35 @@ export default function ManagementPage() {
             console.error('Failed to import Anki deck', err);
             
             let errorMessage = 'Failed to import Anki deck. ';
+            let technicalDetails = '';
             
             if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
                 errorMessage += 'Import timed out. The deck might be too large. Try splitting it into smaller decks.';
+                technicalDetails = 'Timeout after 120 seconds';
             } else if (err.response?.status === 500) {
-                errorMessage += 'Server error occurred. The deck format might not be supported or contains unsupported media types. Try exporting with text-only cards.';
+                errorMessage += 'Server error occurred. The backend service might still be starting up (Render free tier can take 1-2 minutes to wake up). Please wait a moment and try again.';
+                technicalDetails = err.response?.data?.error || err.response?.data?.message || 'Internal server error';
             } else if (err.response?.status === 413) {
                 errorMessage += 'File is too large for the server. Try exporting a smaller deck.';
+                technicalDetails = 'File size exceeds server limit';
             } else if (err.response?.status === 400) {
                 errorMessage += err.response.data?.message || 'Invalid deck format. Make sure you exported it correctly from Anki.';
-            } else if (err.message.includes('Network Error') || err.message.includes('ERR_QUIC')) {
-                errorMessage += 'Network connection error. Please check your internet connection and try again.';
+                technicalDetails = err.response?.data?.error || 'Bad request';
+            } else if (err.response?.status === 403) {
+                errorMessage += 'Access denied. You need admin privileges to import decks.';
+                technicalDetails = 'Authorization failed';
+            } else if (err.message.includes('Network Error') || err.message.includes('ERR_QUIC') || err.message.includes('ERR_CONNECTION')) {
+                errorMessage += 'Network connection error. The backend service might be down or restarting. If using Render free tier, the service may be sleeping and will wake up in 1-2 minutes. Please try again shortly.';
+                technicalDetails = err.message;
             } else {
-                errorMessage += err.response?.data?.message || err.message || 'Please try again or contact support.';
+                errorMessage += err.response?.data?.message || err.message || 'Unknown error occurred. Please try again.';
+                technicalDetails = err.response?.data?.error || err.message || 'Unknown error';
             }
             
             setAnkiResult({
                 success: false,
                 message: errorMessage,
-                technicalDetails: err.response?.data?.error || err.message
+                technicalDetails: technicalDetails
             });
         } finally {
             setAnkiImporting(false);
@@ -660,6 +670,14 @@ export default function ManagementPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            <div className="flex gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+                                <div className="text-blue-600">ℹ️</div>
+                                <div>
+                                    <p className="font-medium text-blue-900 mb-1">Note: Render Free Tier</p>
+                                    <p className="text-blue-800">The backend service may take 1-2 minutes to wake up from sleep if it hasn't been used recently. Please be patient on first attempt.</p>
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="anki-file">Select Anki Deck File</Label>
                                 <Input
