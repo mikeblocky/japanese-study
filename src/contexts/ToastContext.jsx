@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ToastContext = createContext();
+export const ToastContext = createContext();
 
 export function useToast() {
     return useContext(ToastContext);
