@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { BookOpen, CheckCircle, Clock, Play, Search, Settings, Zap, TrendingUp, ChevronRight, Lightbulb, Star, Languages } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useCourses } from '@/hooks/useCourses';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,27 +10,27 @@ import { PageShell } from '@/components/ui/page';
 
 export default function Dashboard() {
     const [dueCount, setDueCount] = useState(0);
-    const [courses, setCourses] = useState([]);
     const [totalItems, setTotalItems] = useState(0);
     const [wordOfDay, setWordOfDay] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [localLoading, setLocalLoading] = useState(true);
+
+    // Use custom hook for courses - eliminates duplicated code!
+    const { courses, loading: coursesLoading } = useCourses();
+
+    const loading = localLoading || coursesLoading;
 
     useEffect(() => {
         let cancelled = false;
 
         const load = async () => {
             try {
-                const [dueRes, coursesRes, itemsRes] = await Promise.allSettled([
+                const [dueRes, itemsRes] = await Promise.allSettled([
                     api.get('/study/items/due'),
-                    api.get('/courses'),
                     api.get('/study/items')
                 ]);
 
                 if (!cancelled && dueRes.status === 'fulfilled' && Array.isArray(dueRes.value.data)) {
                     setDueCount(dueRes.value.data.length);
-                }
-                if (!cancelled && coursesRes.status === 'fulfilled' && Array.isArray(coursesRes.value.data)) {
-                    setCourses(coursesRes.value.data);
                 }
                 if (!cancelled && itemsRes.status === 'fulfilled' && Array.isArray(itemsRes.value.data)) {
                     const items = itemsRes.value.data;
@@ -45,7 +46,7 @@ export default function Dashboard() {
             } catch (err) {
                 console.error('Dashboard fetch failed', err);
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!cancelled) setLocalLoading(false);
             }
         };
 
@@ -96,8 +97,8 @@ export default function Dashboard() {
                                 )}
                             </div>
                             <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 line-clamp-1">
-                                {dueCount > 0 
-                                    ? 'Start reviewing to strengthen memory' 
+                                {dueCount > 0
+                                    ? 'Start reviewing to strengthen memory'
                                     : 'Great job! All reviews done 🎉'}
                             </p>
                         </div>
@@ -214,7 +215,7 @@ export default function Dashboard() {
                         </Link>
                     </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                     {courses.length === 0 ? (
                         <Card>

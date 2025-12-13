@@ -2,56 +2,45 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import api from '@/lib/api';
-import { fetchJsonWithCache } from '@/lib/cache';
+import { useCourses } from '@/hooks/useCourses';
 import { PageShell, PageHeader } from '@/components/ui/page';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function CourseList() {
+    // Use custom hook - eliminates 30+ lines of code!
+    const { courses: baseCourses, loading, error } = useCourses();
     const [courses, setCourses] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
+    // Fetch topic counts for each course
     useEffect(() => {
+        if (baseCourses.length === 0) {
+            setCourses([]);
+            return;
+        }
+
         let cancelled = false;
-        setLoading(true);
-        setError(null);
 
-        const loadCoursesWithTopics = async () => {
-            try {
-                const coursesRes = await api.get('/courses');
-                const baseCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [];
-
-                // Fetch topic counts for each course
-                const coursesWithTopics = await Promise.all(baseCourses.map(async (course) => {
-                    try {
-                        const topicsRes = await api.get(`/courses/${course.id}/topics`);
-                        return { ...course, topics: topicsRes.data || [] };
-                    } catch (err) {
-                        console.error('Failed to load topics for course', course.id, err);
-                        return { ...course, topics: [] };
-                    }
-                }));
-
-                if (!cancelled) {
-                    setCourses(coursesWithTopics);
-                    setLoading(false);
+        const loadTopicsForCourses = async () => {
+            const coursesWithTopics = await Promise.all(baseCourses.map(async (course) => {
+                try {
+                    const topicsRes = await api.get(`/courses/${course.id}/topics`);
+                    return { ...course, topics: topicsRes.data || [] };
+                } catch (err) {
+                    console.error('Failed to load topics for course', course.id, err);
+                    return { ...course, topics: [] };
                 }
-            } catch (err) {
-                if (!cancelled) {
-                    console.error('Failed to fetch courses', err);
-                    setError('Failed to load courses.');
-                    setLoading(false);
-                }
+            }));
+
+            if (!cancelled) {
+                setCourses(coursesWithTopics);
             }
         };
 
-        loadCoursesWithTopics();
+        loadTopicsForCourses();
 
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+        return () => { cancelled = true; };
+    }, [baseCourses]);
 
     return (
         <PageShell className="space-y-8">

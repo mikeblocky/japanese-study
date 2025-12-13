@@ -2,6 +2,7 @@ import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, PlayCircle } from 'lucide-react';
+import { useCourses } from '@/hooks/useCourses';
 import { PageShell } from '@/components/ui/page';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,11 @@ import { Separator } from '@/components/ui/separator';
 export default function CourseDetail() {
     const { courseId } = useParams();
     const [topics, setTopics] = useState([]);
-    const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Use custom hook to get course data
+    const { courses } = useCourses();
+    const course = courses.find(c => c.id.toString() === courseId);
 
     useEffect(() => {
         // Fetch topics
@@ -33,10 +37,6 @@ export default function CourseDetail() {
                 console.error("Failed to fetch topics", err);
                 setLoading(false);
             });
-
-        api.get(`/courses/${courseId}`)
-            .then(res => setCourse(res.data))
-            .catch(err => console.error("Failed to fetch course", err));
     }, [courseId]);
 
     if (loading) return <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground font-light text-xl">Loading curriculum...</div>;

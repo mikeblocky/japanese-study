@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -21,35 +22,35 @@ const ProtectedRoute = () => {
 
 function App() {
   return (
-    <SettingsProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+    <ToastProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
 
-            <Route element={<ProtectedRoute />}>
-              {/* Main App Layout */}
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="courses" element={<CourseList />} />
-                <Route path="courses/:courseId" element={<CourseDetail />} />
-                <Route path="study/:topicId" element={<StudySession />} />
-                <Route path="study" element={<Navigate to="/courses" replace />} />
-                <Route path="console" element={<WordConsole />} />
-                <Route path="management" element={<ManagementPage />} />
-                <Route path="settings" element={<SettingsPage />} />
+              <Route element={<ProtectedRoute />}>
+                {/* Main App Layout */}
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="courses" element={<CourseList />} />
+                  <Route path="courses/:courseId" element={<CourseDetail />} />
+                  <Route path="study/:topicId" element={<StudySession />} />
+                  <Route path="study" element={<Navigate to="/courses" replace />} />
+                  <Route path="console" element={<WordConsole />} />
+                  <Route path="management" element={<ManagementPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
+
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
-
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </SettingsProvider>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </SettingsProvider>
+    </ToastProvider>
   );
 }
 
 export default App;
-
-
