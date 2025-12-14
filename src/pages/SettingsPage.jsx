@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
     User as UserIcon,
@@ -47,8 +47,8 @@ export default function SettingsPage() {
 
     return (
         <PageShell>
-            <PageHeader 
-                title="Settings" 
+            <PageHeader
+                title="Settings"
                 description="Customize your account and study preferences"
             />
 
@@ -152,10 +152,10 @@ export default function SettingsPage() {
                                     <span className="font-semibold">Show furigana</span>
                                     <span className="font-normal text-sm text-muted-foreground">Display readings above kanji characters</span>
                                 </Label>
-                                <Switch 
-                                    id="furigana" 
-                                    checked={settings.showFurigana} 
-                                    onCheckedChange={(v) => updateSetting('showFurigana', v)} 
+                                <Switch
+                                    id="furigana"
+                                    checked={settings.showFurigana}
+                                    onCheckedChange={(v) => updateSetting('showFurigana', v)}
                                 />
                             </div>
                             <Separator />
@@ -164,10 +164,10 @@ export default function SettingsPage() {
                                     <span className="font-semibold">Auto-advance cards</span>
                                     <span className="font-normal text-sm text-muted-foreground">Automatically move to the next card</span>
                                 </Label>
-                                <Switch 
-                                    id="autoAdvance" 
-                                    checked={settings.autoAdvance} 
-                                    onCheckedChange={(v) => updateSetting('autoAdvance', v)} 
+                                <Switch
+                                    id="autoAdvance"
+                                    checked={settings.autoAdvance}
+                                    onCheckedChange={(v) => updateSetting('autoAdvance', v)}
                                 />
                             </div>
                         </CardContent>
@@ -194,10 +194,10 @@ export default function SettingsPage() {
                                     <span className="font-semibold text-sm">Card animations</span>
                                     <span className="font-normal text-xs text-muted-foreground">Flip effects</span>
                                 </Label>
-                                <Switch 
-                                    id="cardAnim" 
-                                    checked={settings.cardAnimations} 
-                                    onCheckedChange={(v) => updateSetting('cardAnimations', v)} 
+                                <Switch
+                                    id="cardAnim"
+                                    checked={settings.cardAnimations}
+                                    onCheckedChange={(v) => updateSetting('cardAnimations', v)}
                                 />
                             </div>
                             <Separator />
@@ -206,10 +206,10 @@ export default function SettingsPage() {
                                     <span className="font-semibold text-sm">UI animations</span>
                                     <span className="font-normal text-xs text-muted-foreground">Transitions</span>
                                 </Label>
-                                <Switch 
-                                    id="uiAnim" 
-                                    checked={settings.uiAnimations === true} 
-                                    onCheckedChange={(v) => updateSetting('uiAnimations', v)} 
+                                <Switch
+                                    id="uiAnim"
+                                    checked={settings.uiAnimations === true}
+                                    onCheckedChange={(v) => updateSetting('uiAnimations', v)}
                                 />
                             </div>
                         </CardContent>

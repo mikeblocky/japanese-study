@@ -1,27 +1,37 @@
 import api from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Check, X, RotateCcw, Keyboard, MousePointer2, ArrowLeft, Clock } from 'lucide-react';
+import { RotateCcw, Keyboard, MousePointer2, ArrowLeft, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TestSetup from '@/components/TestSetup';
-import Furigana from '@/components/Furigana';
 import { useSettings } from '@/contexts/SettingsContext';
+
+// Extracted components
+import { StudyProgress, StudyTimer, StudyStats, getDisplayContent } from '@/components/study/StudyComponents';
+import FlashcardMode from '@/components/study/FlashcardMode';
+import QuizMode from '@/components/study/QuizMode';
+import TypingMode from '@/components/study/TypingMode';
 
 export default function StudySession() {
     const { topicId } = useParams();
     const { settings } = useSettings();
+
+    // Core state
     const [items, setItems] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
-    const [sessionId, setSessionId] = useState(null);
 
+
+    // Mode state
     const [mode, setMode] = useState('flashcard');
     const [quizOptions, setQuizOptions] = useState([]);
+    const [quizDirection, setQuizDirection] = useState('forward');
     const [typingInput, setTypingInput] = useState('');
     const [feedback, setFeedback] = useState(null);
 
+    // Timer state
     const [showTestSetup, setShowTestSetup] = useState(topicId === 'test');
     const [timeLeft, setTimeLeft] = useState(null);
     const [isTimeUp, setIsTimeUp] = useState(false);
@@ -32,41 +42,24 @@ export default function StudySession() {
         if (topicId === 'test') return;
 
         setElapsedSeconds(0);
-        api.post('/study/session/start')
-            .then(res => setSessionId(res.data.id))
-            .catch(err => console.error("Failed to start session:", err));
-
-        const fetchUrl = topicId === 'review'
-            ? '/study/items/due'
-            : topicId === 'daily'
-                ? '/study/items/due'
-                : `/study/items/topic/${topicId}`;
+        const fetchUrl = `/topics/${topicId}/items`;
 
         api.get(fetchUrl)
-            .then(res => {
-                const data = res.data;
-                if (data.length > 0) setItems(data);
-                else setItems([]);
-            })
+            .then(res => setItems(res.data.length > 0 ? res.data : []))
             .catch(err => {
                 console.error("Fetch error:", err);
                 setItems([]);
             });
     }, [topicId]);
 
-    const [quizDirection, setQuizDirection] = useState('forward');
-
-    // Quiz options & Direction
+    // Quiz options & direction
     useEffect(() => {
         if (mode === 'quiz' && items.length > 0 && items[currentIndex]) {
-            // Randomize direction for each card (50/50 mix)
             setQuizDirection(Math.random() > 0.5 ? 'forward' : 'reverse');
-
             const current = items[currentIndex];
             const others = items.filter(i => i.id !== current.id);
             const distractors = others.sort(() => 0.5 - Math.random()).slice(0, 3);
-            const options = [...distractors, current].sort(() => 0.5 - Math.random());
-            setQuizOptions(options);
+            setQuizOptions([...distractors, current].sort(() => 0.5 - Math.random()));
         }
     }, [currentIndex, mode, items]);
 
@@ -90,26 +83,21 @@ export default function StudySession() {
     }, [sessionId, isFinished]);
 
     // Keyboard shortcuts
-    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (isFinished || showTestSetup || feedback) return;
 
-            if (mode === 'quiz' && quizOptions.length > 0) {
-                if (['1', '2', '3', '4'].includes(e.key)) {
-                    const index = parseInt(e.key) - 1;
-                    if (quizOptions[index]) {
-                        handleNext(quizOptions[index].id === items[currentIndex].id);
-                    }
+            if (mode === 'quiz' && quizOptions.length > 0 && ['1', '2', '3', '4'].includes(e.key)) {
+                const index = parseInt(e.key) - 1;
+                if (quizOptions[index]) {
+                    handleNext(quizOptions[index].id === items[currentIndex].id);
                 }
             }
 
             if (mode === 'flashcard') {
-                if (e.code === 'Space' || e.code === 'Enter') {
+                if ((e.code === 'Space' || e.code === 'Enter') && !isFlipped) {
                     e.preventDefault();
-                    if (!isFlipped) {
-                        setIsFlipped(true);
-                    }
+                    setIsFlipped(true);
                 }
                 if (isFlipped) {
                     if (e.key === 'ArrowRight' || e.key === '1') handleNext(true);
@@ -157,9 +145,7 @@ export default function StudySession() {
     const handleTypingSubmit = (e) => {
         e.preventDefault();
         const input = typingInput.trim().toLowerCase();
-        // Check against the English meaning
         const correctAnswer = (displayCurrent.english || currentItem.meaning || '').toLowerCase();
-        // Allow partial match for longer answers or exact match
         const isCorrect = correctAnswer.includes(input) || input.includes(correctAnswer) || correctAnswer === input;
         handleNext(isCorrect && input.length > 0);
     };
@@ -180,27 +166,6 @@ export default function StudySession() {
         } catch (err) {
             console.error("Failed to start test:", err);
         }
-    };
-
-    const formatTime = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
-    // Dynamic font sizing based on text length
-    const getTextSize = (text, base = 'large') => {
-        if (!text) return base === 'large' ? 'text-5xl' : 'text-3xl';
-        const len = text.length;
-        if (base === 'large') {
-            if (len > 30) return 'text-2xl md:text-3xl';
-            if (len > 15) return 'text-3xl md:text-4xl';
-            if (len > 8) return 'text-4xl md:text-5xl';
-            return 'text-5xl md:text-7xl';
-        }
-        if (len > 40) return 'text-lg md:text-xl';
-        if (len > 20) return 'text-xl md:text-2xl';
-        return 'text-2xl md:text-3xl';
     };
 
     // Test Setup
@@ -232,20 +197,10 @@ export default function StudySession() {
 
     // Finished
     if (isFinished) {
-        const accuracy = items.length > 0 ? Math.round((stats.correct / items.length) * 100) : 0;
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
-                <div className="text-center space-y-4">
-                    <div className="text-6xl">{accuracy >= 80 ? '🎊' : accuracy >= 50 ? '👍' : '💪'}</div>
-                    <h2 className="text-3xl font-medium">Session Complete</h2>
-                    <div className="text-7xl font-bold tracking-tight">
-                        {accuracy}<span className="text-3xl text-muted-foreground">%</span>
-                    </div>
-                    {isTimeUp && <p className="text-destructive font-medium">Time's up!</p>}
-                    <p className="text-muted-foreground">
-                        {stats.correct} correct · {stats.incorrect} incorrect
-                    </p>
-                </div>
+                <StudyStats correct={stats.correct} incorrect={stats.incorrect} total={items.length} />
+                {isTimeUp && <p className="text-destructive font-medium">Time's up!</p>}
                 <div className="flex gap-4 flex-wrap justify-center">
                     <Link to="/courses" className="px-6 py-2.5 rounded-full border border-border hover:bg-secondary transition-colors text-sm font-medium">
                         Back to Courses
@@ -258,33 +213,15 @@ export default function StudySession() {
         );
     }
 
-    // Helper to detect Japanese/non-ASCII characters
-    const isJapanese = (text) => /[^\x00-\x7F]/.test(text || '');
-
-    // Smart content derivation to handle swapped fields from Anki import
-    const getDisplayContent = (item) => {
-        const meaningHasJp = isJapanese(item.meaning);
-        const secondaryHasJp = isJapanese(item.secondaryText);
-
-        let englishText = item.meaning;
-        let readingText = item.secondaryText;
-
-        // If meaning contains Japanese and secondary doesn't, they're swapped
-        if (meaningHasJp && !secondaryHasJp && item.secondaryText) {
-            englishText = item.secondaryText;
-            readingText = item.meaning;
-        }
-
-        return {
-            term: item.primaryText,
-            english: englishText,
-            reading: readingText
-        };
-    };
-
     const currentItem = items[currentIndex];
     const displayCurrent = getDisplayContent(currentItem);
-    const progress = ((currentIndex) / items.length) * 100;
+    const progress = (currentIndex / items.length) * 100;
+
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
     return (
         <div className="pb-20">
@@ -298,13 +235,9 @@ export default function StudySession() {
 
                     <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
-                            <span className="font-medium text-foreground">
-                                {currentIndex + 1}
-                            </span>
+                            <span className="font-medium text-foreground">{currentIndex + 1}</span>
                             <span className="text-muted-foreground">/</span>
-                            <span className="text-muted-foreground">
-                                {items.length}
-                            </span>
+                            <span className="text-muted-foreground">{items.length}</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
                             <Clock className="w-4 h-4 text-muted-foreground" />
@@ -342,171 +275,45 @@ export default function StudySession() {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="h-2 bg-secondary rounded-full mb-8 overflow-hidden">
-                    <div
-                        className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                    />
+                <div className="mb-8">
+                    <StudyProgress current={currentIndex} total={items.length} />
                 </div>
 
-                {/* Main Content */}
+                {/* Main Content - Mode-specific rendering */}
                 {mode === 'flashcard' && (
-                    <div className="space-y-6">
-                        <div
-                            className={cn(
-                                "relative min-h-[400px] rounded-2xl p-8 sm:p-12 cursor-pointer border-2 transition-all",
-                                feedback === 'correct' && "border-green-500 bg-green-50/50",
-                                feedback === 'incorrect' && "border-red-500 bg-red-50/50",
-                                !feedback && "border-border hover:border-primary/50 hover:shadow-lg bg-card"
-                            )}
-                            onClick={() => !feedback && setIsFlipped(!isFlipped)}
-                        >
-                            {!isFlipped ? (
-                                <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px]">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground mb-8">Term</span>
-                                    <h2 className={cn("font-bold text-foreground leading-tight", getTextSize(displayCurrent.term))}>
-                                        <Furigana
-                                            text={displayCurrent.term}
-                                            reading={displayCurrent.reading}
-                                            show={settings.showFurigana}
-                                        />
-                                    </h2>
-                                    <p className="mt-auto text-sm text-muted-foreground">Click or press Space to reveal</p>
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px] space-y-8">
-                                    <div className="space-y-3">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Meaning</span>
-                                        <p className={cn("text-foreground font-semibold", getTextSize(displayCurrent.english, 'medium'))}>
-                                            {displayCurrent.english || '—'}
-                                        </p>
-                                    </div>
-
-                                    <div className="w-20 h-px bg-border" />
-
-                                    <div className="space-y-3">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Reading</span>
-                                        <p className={cn("text-foreground", getTextSize(displayCurrent.reading, 'medium'))}>
-                                            {displayCurrent.reading || '—'}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {isFlipped && !feedback && (
-                            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-                                <button
-                                    onClick={() => handleNext(false)}
-                                    className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all font-medium"
-                                >
-                                    <X className="w-5 h-5" />
-                                    Again
-                                </button>
-                                <button
-                                    onClick={() => handleNext(true)}
-                                    className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all font-medium shadow-lg shadow-primary/20"
-                                >
-                                    <Check className="w-5 h-5" />
-                                    Got it
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <FlashcardMode
+                        displayContent={displayCurrent}
+                        isFlipped={isFlipped}
+                        onFlip={() => setIsFlipped(!isFlipped)}
+                        onAnswer={handleNext}
+                        feedback={feedback}
+                        showFurigana={settings.showFurigana}
+                    />
                 )}
 
                 {mode === 'quiz' && (
-                    <div className="space-y-8">
-                        <div className="text-center space-y-4 py-8">
-                            {quizDirection === 'reverse' && (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Select the Japanese Term</span>
-                            )}
-                            <h2 className={cn("font-bold", getTextSize(quizDirection === 'reverse' ? displayCurrent.english : displayCurrent.term))}>
-                                {quizDirection === 'reverse' ? (
-                                    displayCurrent.english
-                                ) : (
-                                    <Furigana
-                                        text={displayCurrent.term}
-                                        reading={displayCurrent.reading}
-                                        show={settings.showFurigana}
-                                    />
-                                )}
-                            </h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {quizOptions.map((option, idx) => {
-                                const optContent = getDisplayContent(option);
-                                const isCorrect = option.id === currentItem.id;
-                                return (
-                                    <button
-                                        key={option.id}
-                                        disabled={feedback !== null}
-                                        onClick={() => handleNext(isCorrect)}
-                                        className={cn(
-                                            "p-5 rounded-xl border-2 text-left transition-all",
-                                            feedback === null && "hover:border-primary hover:shadow-lg bg-card",
-                                            feedback === 'correct' && isCorrect && "border-green-500 bg-green-50",
-                                            feedback === 'incorrect' && isCorrect && "border-green-500 bg-green-50",
-                                            feedback === 'incorrect' && !isCorrect && "opacity-50",
-                                            !feedback && "border-border"
-                                        )}
-                                    >
-                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-secondary text-xs font-medium text-muted-foreground mb-2">{idx + 1}</span>
-                                        {quizDirection === 'reverse' ? (
-                                            <div>
-                                                <span className="font-semibold text-lg block">{optContent.term}</span>
-                                                {optContent.reading && <div className="text-sm text-muted-foreground mt-1">{optContent.reading}</div>}
-                                            </div>
-                                        ) : (
-                                            <span className="font-semibold">{optContent.english}</span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    <QuizMode
+                        displayContent={displayCurrent}
+                        quizOptions={quizOptions}
+                        quizDirection={quizDirection}
+                        onAnswer={handleNext}
+                        feedback={feedback}
+                        currentItemId={currentItem.id}
+                        showFurigana={settings.showFurigana}
+                    />
                 )}
 
                 {mode === 'typing' && (
-                    <div className="space-y-8">
-                        <div className="text-center space-y-4 py-8">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">Type the meaning</span>
-                            <h2 className={cn("font-bold", getTextSize(displayCurrent.term))}>
-                                <Furigana
-                                    text={displayCurrent.term}
-                                    reading={displayCurrent.reading}
-                                    show={settings.showFurigana}
-                                />
-                            </h2>
-                            {displayCurrent.reading && (
-                                <p className="text-muted-foreground text-lg">{displayCurrent.reading}</p>
-                            )}
-                        </div>
-
-                        <form onSubmit={handleTypingSubmit} className="max-w-md mx-auto">
-                            <input
-                                autoFocus
-                                value={typingInput}
-                                onChange={e => setTypingInput(e.target.value)}
-                                className={cn(
-                                    "w-full text-center text-2xl sm:text-3xl p-4 sm:p-6 rounded-xl border-2 transition-all",
-                                    "bg-card focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
-                                    feedback === 'correct' && "border-green-500 bg-green-50",
-                                    feedback === 'incorrect' && "border-red-500 bg-red-50",
-                                    !feedback && "border-border"
-                                )}
-                                placeholder="Type here..."
-                                disabled={feedback !== null}
-                                autoComplete="off"
-                                autoCapitalize="off"
-                            />
-                        </form>
-                    </div>
+                    <TypingMode
+                        displayContent={displayCurrent}
+                        typingInput={typingInput}
+                        onInputChange={setTypingInput}
+                        onSubmit={handleTypingSubmit}
+                        feedback={feedback}
+                        showFurigana={settings.showFurigana}
+                    />
                 )}
             </div>
         </div>
     );
 }
-
-

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 
 /**
- * Custom hook for managing courses
- * Provides CRUD operations and caching
+ * Custom hook for managing courses with their topics.
+ * Fetches courses and their topics in one call.
  */
 export function useCourses(autoLoad = true) {
     const [courses, setCourses] = useState([]);
@@ -14,9 +14,26 @@ export function useCourses(autoLoad = true) {
         try {
             setLoading(true);
             setError(null);
-            const res = await api.get('/courses');
-            setCourses(res.data || []);
-            return { success: true, data: res.data };
+
+            // First get courses
+            const coursesRes = await api.get('/courses');
+            const coursesData = coursesRes.data || [];
+
+            // Then fetch topics for each course in parallel
+            const coursesWithTopics = await Promise.all(
+                coursesData.map(async (course) => {
+                    try {
+                        const topicsRes = await api.get(`/courses/${course.id}/topics`);
+                        return { ...course, topics: topicsRes.data || [] };
+                    } catch (err) {
+                        console.warn(`Failed to load topics for course ${course.id}:`, err);
+                        return { ...course, topics: [] };
+                    }
+                })
+            );
+
+            setCourses(coursesWithTopics);
+            return { success: true, data: coursesWithTopics };
         } catch (err) {
             const errorMsg = err.response?.data?.message || err.message || 'Failed to load courses';
             setError(errorMsg);

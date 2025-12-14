@@ -1,27 +1,21 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useForm } from '@/hooks/useForm';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen } from 'lucide-react';
+import { FormCard, EmptyState, ActionButtons, FormField, Select, PageHeader } from '@/components/management/SharedComponents';
 
 export default function CoursesTab() {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(null);
 
-    // Custom hooks eliminate duplicated code!
     const { courses, loading, addCourse, updateCourse, deleteCourse } = useCourses();
-    const { values, handleChange, reset } = useForm({
-        title: '',
-        description: '',
-        level: 'beginner'
-    });
+    const { values, handleChange, reset } = useForm({ title: '', description: '', level: 'beginner' });
     const toast = useToast();
 
     const handleSubmit = async () => {
@@ -29,16 +23,10 @@ export default function CoursesTab() {
             toast.error('Please enter a course title');
             return;
         }
-
-        const result = editingId
-            ? await updateCourse(editingId, values)
-            : await addCourse(values);
-
+        const result = editingId ? await updateCourse(editingId, values) : await addCourse(values);
         if (result.success) {
             toast.success(editingId ? 'Course updated!' : 'Course created!');
-            setShowForm(false);
-            setEditingId(null);
-            reset();
+            closeForm();
         } else {
             toast.error(result.error || 'Operation failed');
         }
@@ -53,17 +41,12 @@ export default function CoursesTab() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this course? All lessons and words will be deleted.')) return;
-
+        if (!confirm('Delete this course? All lessons and words will be deleted.')) return;
         setDeleteLoading(`course-${id}`);
         const result = await deleteCourse(id);
         setDeleteLoading(null);
-
-        if (result.success) {
-            toast.success('Course deleted');
-        } else {
-            toast.error(result.error || 'Failed to delete course');
-        }
+        if (result.success) toast.success('Course deleted');
+        else toast.error(result.error || 'Failed to delete');
     };
 
     const closeForm = () => {
@@ -72,69 +55,50 @@ export default function CoursesTab() {
         reset();
     };
 
+    const levelOptions = [
+        { value: 'beginner', label: 'Beginner' },
+        { value: 'intermediate', label: 'Intermediate' },
+        { value: 'advanced', label: 'Advanced' }
+    ];
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-                <h2 className="text-lg sm:text-xl font-semibold">Course Management</h2>
-                <Button onClick={() => setShowForm(true)} className="gap-2 w-full sm:w-auto">
-                    <Plus className="h-4 w-4" />
-                    Add course
-                </Button>
-            </div>
+            <PageHeader
+                title="Course Management"
+                action={
+                    <Button onClick={() => setShowForm(true)} className="gap-2 w-full sm:w-auto">
+                        <Plus className="h-4 w-4" /> Add course
+                    </Button>
+                }
+            />
 
             {showForm && (
-                <Card className="border-primary">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>{editingId ? 'Edit course' : 'Add new course'}</CardTitle>
-                            <Button variant="ghost" size="sm" onClick={closeForm}>
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="course-title">Course Title *</Label>
-                            <Input
-                                id="course-title"
-                                value={values.title}
-                                onChange={(e) => handleChange('title', e.target.value)}
-                                placeholder="e.g., Japanese Beginner"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="course-description">Description</Label>
-                            <Input
-                                id="course-description"
-                                value={values.description}
-                                onChange={(e) => handleChange('description', e.target.value)}
-                                placeholder="Brief description of the course"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="course-level">Level</Label>
-                            <select
-                                id="course-level"
-                                value={values.level}
-                                onChange={(e) => handleChange('level', e.target.value)}
-                                className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                            >
-                                <option value="beginner">Beginner</option>
-                                <option value="intermediate">Intermediate</option>
-                                <option value="advanced">Advanced</option>
-                            </select>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                            <Button onClick={handleSubmit} className="flex-1">
-                                <Check className="mr-2 h-4 w-4" />
-                                {editingId ? 'Update' : 'Add'}
-                            </Button>
-                            <Button variant="outline" onClick={closeForm} className="flex-1">
-                                Cancel
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                <FormCard title="course" onClose={closeForm} onSubmit={handleSubmit} isEditing={!!editingId}>
+                    <FormField label="Course Title" id="course-title" required>
+                        <Input
+                            id="course-title"
+                            value={values.title}
+                            onChange={(e) => handleChange('title', e.target.value)}
+                            placeholder="e.g., Japanese Beginner"
+                        />
+                    </FormField>
+                    <FormField label="Description" id="course-description">
+                        <Input
+                            id="course-description"
+                            value={values.description}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                            placeholder="Brief description"
+                        />
+                    </FormField>
+                    <FormField label="Level" id="course-level">
+                        <Select
+                            value={values.level}
+                            onChange={(v) => handleChange('level', v)}
+                            options={levelOptions}
+                            placeholder="Select level"
+                        />
+                    </FormField>
+                </FormCard>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -153,29 +117,11 @@ export default function CoursesTab() {
                                         {course.description || 'No description'}
                                     </CardDescription>
                                 </div>
-                                <div className="flex gap-1 shrink-0">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleEdit(course)}
-                                        className="h-8 w-8 p-0"
-                                    >
-                                        <Edit2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(course.id)}
-                                        disabled={deleteLoading === `course-${course.id}`}
-                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                    >
-                                        {deleteLoading === `course-${course.id}` ? (
-                                            <div className="h-3.5 w-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        )}
-                                    </Button>
-                                </div>
+                                <ActionButtons
+                                    onEdit={() => handleEdit(course)}
+                                    onDelete={() => handleDelete(course.id)}
+                                    isDeleting={deleteLoading === `course-${course.id}`}
+                                />
                             </div>
                         </CardHeader>
                     </Card>
@@ -183,17 +129,13 @@ export default function CoursesTab() {
             </div>
 
             {courses.length === 0 && !loading && (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No courses yet</h3>
-                        <p className="text-muted-foreground mb-4">Create your first course to get started</p>
-                        <Button onClick={() => setShowForm(true)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add course
-                        </Button>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    icon={BookOpen}
+                    title="No courses yet"
+                    description="Create your first course to get started"
+                    actionLabel="Add course"
+                    onAction={() => setShowForm(true)}
+                />
             )}
         </div>
     );

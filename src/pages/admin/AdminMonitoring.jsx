@@ -1,26 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Cpu, Activity, HardDrive, Recycle, Clock, Zap, Server,
     TrendingUp, Layers, ChevronRight, RefreshCw, Thermometer
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
-import { useAnimationsEnabled } from '@/hooks/useAnimationsEnabled';
+import { useAuth } from '@/contexts/AuthContext';
+import { MetricCard, ProgressBar } from '@/components/admin/MetricComponents';
 
 /**
  * Admin Monitoring Page - Deep server metrics (JVM, Threads, GC, Diagnostics)
  */
 export default function AdminMonitoring() {
     const { user } = useAuth();
-    const animationsEnabled = useAnimationsEnabled();
     const [metrics, setMetrics] = useState({ jvm: {}, threads: {}, gc: {}, diagnostics: {}, environment: {} });
-    const [logs, setLogs] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [fetchError, setFetchError] = useState(null);
-    // Pause auto-refresh when user is interacting
     const [pauseRefresh, setPauseRefresh] = useState(false);
 
     const { jvm, threads, gc, diagnostics: diag, environment: env } = metrics || {};
@@ -63,46 +59,9 @@ export default function AdminMonitoring() {
 
     useEffect(() => {
         fetchAll();
-        const interval = setInterval(fetchAll, 10000); // Slower refresh for monitoring
+        const interval = setInterval(fetchAll, 10000);
         return () => clearInterval(interval);
     }, [fetchAll]);
-
-    const MetricCard = ({ icon: Icon, title, value, unit, color, subValue }) => (
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-gray-500 text-[10px] uppercase tracking-wider mb-2">
-                <Icon className={cn("w-3.5 h-3.5", color)} />
-                {title}
-            </div>
-            <div className="text-2xl font-light">
-                {value ?? '—'}
-                {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
-            </div>
-            {subValue && <div className="text-xs text-gray-600 mt-1">{subValue}</div>}
-        </div>
-    );
-
-    const ProgressBar = ({ value, max, color = "from-purple-500 to-violet-500" }) => {
-        const safeMax = typeof max === 'number' && max > 0 ? max : 1;
-        const safeValue = typeof value === 'number' && value > 0 ? value : 0;
-        const widthPct = `${Math.min((safeValue / safeMax) * 100, 100)}%`;
-
-        return (
-        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-            {animationsEnabled ? (
-                <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: widthPct }}
-                    className={cn("h-full bg-gradient-to-r rounded-full", color)}
-                />
-            ) : (
-                <div
-                    className={cn("h-full bg-gradient-to-r rounded-full", color)}
-                    style={{ width: widthPct }}
-                />
-            )}
-        </div>
-        );
-    };
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: Activity },
@@ -157,65 +116,25 @@ export default function AdminMonitoring() {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
                 <div className="space-y-6">
-                    {/* Quick Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <MetricCard
-                            icon={Clock}
-                            title="Uptime"
-                            value={diag?.uptimeFormatted}
-                            color="text-emerald-400"
-                        />
-                        <MetricCard
-                            icon={HardDrive}
-                            title="Heap Used"
-                            value={jvm?.memory?.heapUsed}
-                            unit="MB"
-                            color="text-purple-400"
-                            subValue={`of ${jvm?.memory?.heapMax} MB`}
-                        />
-                        <MetricCard
-                            icon={Cpu}
-                            title="Processors"
-                            value={jvm?.availableProcessors}
-                            color="text-blue-400"
-                        />
-                        <MetricCard
-                            icon={Layers}
-                            title="Threads"
-                            value={threads?.activeThreadCount}
-                            color="text-orange-400"
-                        />
+                        <MetricCard icon={Clock} title="Uptime" value={diag?.uptimeFormatted} color="text-emerald-400" />
+                        <MetricCard icon={HardDrive} title="Heap Used" value={jvm?.memory?.heapUsed} unit="MB" color="text-purple-400" subValue={`of ${jvm?.memory?.heapMax} MB`} />
+                        <MetricCard icon={Cpu} title="Processors" value={jvm?.availableProcessors} color="text-blue-400" />
+                        <MetricCard icon={Layers} title="Threads" value={threads?.activeThreadCount} color="text-orange-400" />
                     </div>
-
-                    {/* Memory Overview */}
                     {jvm?.memory && (
                         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                             <h3 className="text-sm font-medium text-gray-400 mb-4">Heap Memory</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-xs mb-1">
-                                    <span>{jvm.memory.heapUsed} MB used</span>
-                                    <span>{jvm.memory.heapMax} MB max</span>
-                                </div>
-                                <ProgressBar value={jvm.memory.heapUsed} max={jvm.memory.heapMax} />
+                            <div className="flex justify-between text-xs mb-1">
+                                <span>{jvm.memory.heapUsed} MB used</span>
+                                <span>{jvm.memory.heapMax} MB max</span>
                             </div>
+                            <ProgressBar value={jvm.memory.heapUsed} max={jvm.memory.heapMax} />
                         </div>
                     )}
-
-                    {/* GC Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <MetricCard
-                            icon={Recycle}
-                            title="GC Collections"
-                            value={gc?.totalCollections}
-                            color="text-cyan-400"
-                        />
-                        <MetricCard
-                            icon={Zap}
-                            title="GC Time"
-                            value={gc?.totalGcTimeMs}
-                            unit="ms"
-                            color="text-yellow-400"
-                        />
+                        <MetricCard icon={Recycle} title="GC Collections" value={gc?.totalCollections} color="text-cyan-400" />
+                        <MetricCard icon={Zap} title="GC Time" value={gc?.totalGcTimeMs} unit="ms" color="text-yellow-400" />
                     </div>
                 </div>
             )}
@@ -225,48 +144,33 @@ export default function AdminMonitoring() {
                 <div className="space-y-6">
                     <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                         <h3 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-                            <HardDrive className="w-4 h-4 text-purple-400" />
-                            Heap Memory Details
+                            <HardDrive className="w-4 h-4 text-purple-400" /> Heap Memory Details
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-                                <div className="text-2xl font-light">{jvm.memory.heapUsed}</div>
-                                <div className="text-xs text-gray-500 mt-1">Used (MB)</div>
-                            </div>
-                            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-                                <div className="text-2xl font-light">{jvm.memory.heapFree}</div>
-                                <div className="text-xs text-gray-500 mt-1">Free (MB)</div>
-                            </div>
-                            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-                                <div className="text-2xl font-light">{jvm.memory.heapTotal}</div>
-                                <div className="text-xs text-gray-500 mt-1">Total (MB)</div>
-                            </div>
-                            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
-                                <div className="text-2xl font-light">{jvm.memory.heapMax}</div>
-                                <div className="text-xs text-gray-500 mt-1">Max (MB)</div>
-                            </div>
-                        </div>
-                        <div className="mt-4">
-                            <ProgressBar
-                                value={jvm.memory.heapUsed}
-                                max={jvm.memory.heapMax}
-                                color="from-purple-500 to-pink-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* JVM Info */}
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-                        <h3 className="text-sm font-medium text-gray-400 mb-4">JVM Information</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            {jvm.jvm && Object.entries(jvm.jvm).map(([key, value]) => (
-                                <div key={key} className="flex justify-between py-2 border-b border-gray-800">
-                                    <span className="text-gray-500">{key}</span>
-                                    <span className="font-mono text-xs">{value}</span>
+                            {['heapUsed', 'heapFree', 'heapTotal', 'heapMax'].map(key => (
+                                <div key={key} className="p-4 bg-gray-800/50 rounded-lg text-center">
+                                    <div className="text-2xl font-light">{jvm.memory?.[key]}</div>
+                                    <div className="text-xs text-gray-500 mt-1">{key.replace('heap', '')} (MB)</div>
                                 </div>
                             ))}
                         </div>
+                        <div className="mt-4">
+                            <ProgressBar value={jvm.memory?.heapUsed} max={jvm.memory?.heapMax} color="from-purple-500 to-pink-500" />
+                        </div>
                     </div>
+                    {jvm.jvm && (
+                        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+                            <h3 className="text-sm font-medium text-gray-400 mb-4">JVM Information</h3>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                {Object.entries(jvm.jvm).map(([key, value]) => (
+                                    <div key={key} className="flex justify-between py-2 border-b border-gray-800">
+                                        <span className="text-gray-500">{key}</span>
+                                        <span className="font-mono text-xs">{value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -277,32 +181,32 @@ export default function AdminMonitoring() {
                         <MetricCard icon={Layers} title="Active Threads" value={threads.activeThreadCount} color="text-blue-400" />
                         <MetricCard icon={TrendingUp} title="Peak Threads" value={threads.peakThreadCount} color="text-orange-400" />
                     </div>
-
-                    {/* Thread States */}
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-                        <h3 className="text-sm font-medium text-gray-400 mb-4">Thread States</h3>
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                            {threads.threadStates && Object.entries(threads.threadStates).map(([state, count]) => (
-                                <div key={state} className="p-3 bg-gray-800/50 rounded-lg text-center">
-                                    <div className="text-lg font-light">{count}</div>
-                                    <div className="text-[10px] text-gray-500 uppercase">{state}</div>
-                                </div>
-                            ))}
+                    {threads.threadStates && (
+                        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+                            <h3 className="text-sm font-medium text-gray-400 mb-4">Thread States</h3>
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                                {Object.entries(threads.threadStates).map(([state, count]) => (
+                                    <div key={state} className="p-3 bg-gray-800/50 rounded-lg text-center">
+                                        <div className="text-lg font-light">{count}</div>
+                                        <div className="text-[10px] text-gray-500 uppercase">{state}</div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Sample Threads */}
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-                        <h3 className="text-sm font-medium text-gray-400 mb-4">Sample Threads</h3>
-                        <div className="space-y-2 font-mono text-xs">
-                            {threads.sampleThreads?.map((thread, i) => (
-                                <div key={i} className="p-2 bg-gray-800/50 rounded flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                    {thread}
-                                </div>
-                            ))}
+                    )}
+                    {threads.sampleThreads && (
+                        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+                            <h3 className="text-sm font-medium text-gray-400 mb-4">Sample Threads</h3>
+                            <div className="space-y-2 font-mono text-xs">
+                                {threads.sampleThreads.map((thread, i) => (
+                                    <div key={i} className="p-2 bg-gray-800/50 rounded flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                        {thread}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -313,54 +217,44 @@ export default function AdminMonitoring() {
                         <MetricCard icon={Recycle} title="Total Collections" value={gc.totalCollections} color="text-cyan-400" />
                         <MetricCard icon={Clock} title="Total GC Time" value={gc.totalGcTimeMs} unit="ms" color="text-yellow-400" />
                     </div>
-
-                    {/* GC Collectors */}
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
-                        <h3 className="text-sm font-medium text-gray-400 mb-4">Garbage Collectors</h3>
-                        <div className="space-y-4">
-                            {gc.collectors?.map((collector, i) => (
-                                <div key={i} className="p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium">{collector.name}</span>
-                                        <span className="text-xs text-gray-500">{collector.collectionCount} collections</span>
+                    {gc.collectors && (
+                        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
+                            <h3 className="text-sm font-medium text-gray-400 mb-4">Garbage Collectors</h3>
+                            <div className="space-y-4">
+                                {gc.collectors.map((collector, i) => (
+                                    <div key={i} className="p-4 bg-gray-800/50 rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-medium">{collector.name}</span>
+                                            <span className="text-xs text-gray-500">{collector.collectionCount} collections</span>
+                                        </div>
+                                        <div className="text-xs text-gray-500">Time spent: {collector.collectionTimeMs} ms</div>
                                     </div>
-                                    <div className="text-xs text-gray-500">
-                                        Time spent: {collector.collectionTimeMs} ms
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 
             {/* Environment Tab */}
             {activeTab === 'environment' && env && (
                 <div className="space-y-6">
-                    {/* System Info */}
                     <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                         <h3 className="text-sm font-medium text-gray-400 mb-4">System Information</h3>
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="flex justify-between py-2 border-b border-gray-800">
-                                <span className="text-gray-500">OS</span>
-                                <span>{env.osName} {env.osVersion}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-gray-800">
-                                <span className="text-gray-500">Architecture</span>
-                                <span>{env.osArch}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-gray-800">
-                                <span className="text-gray-500">Hostname</span>
-                                <span className="font-mono text-xs">{env.hostname}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-gray-800">
-                                <span className="text-gray-500">IP Address</span>
-                                <span className="font-mono text-xs">{env.hostAddress}</span>
-                            </div>
+                            {[
+                                ['OS', `${env.osName} ${env.osVersion}`],
+                                ['Architecture', env.osArch],
+                                ['Hostname', env.hostname],
+                                ['IP Address', env.hostAddress]
+                            ].map(([label, value]) => (
+                                <div key={label} className="flex justify-between py-2 border-b border-gray-800">
+                                    <span className="text-gray-500">{label}</span>
+                                    <span className="font-mono text-xs">{value}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-
-                    {/* Disk Space */}
                     {env.disks && (
                         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                             <h3 className="text-sm font-medium text-gray-400 mb-4">Disk Space</h3>
@@ -369,37 +263,27 @@ export default function AdminMonitoring() {
                                     <div key={i} className="p-4 bg-gray-800/50 rounded-lg">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-mono">{disk.path}</span>
-                                            <span className="text-xs text-gray-500">
-                                                {disk.freeSpaceGB} GB free / {disk.totalSpaceGB} GB
-                                            </span>
+                                            <span className="text-xs text-gray-500">{disk.freeSpaceGB} GB free / {disk.totalSpaceGB} GB</span>
                                         </div>
-                                        <ProgressBar
-                                            value={disk.totalSpaceGB - disk.freeSpaceGB}
-                                            max={disk.totalSpaceGB}
-                                            color="from-orange-500 to-red-500"
-                                        />
+                                        <ProgressBar value={disk.totalSpaceGB - disk.freeSpaceGB} max={disk.totalSpaceGB} color="from-orange-500 to-red-500" />
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
-
-                    {/* Paths */}
                     <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                         <h3 className="text-sm font-medium text-gray-400 mb-4">Paths</h3>
                         <div className="space-y-2 text-xs font-mono">
-                            <div className="p-2 bg-gray-800/50 rounded flex gap-2">
-                                <span className="text-gray-500 w-24">Java Home:</span>
-                                <span className="truncate">{env.javaHome}</span>
-                            </div>
-                            <div className="p-2 bg-gray-800/50 rounded flex gap-2">
-                                <span className="text-gray-500 w-24">User Dir:</span>
-                                <span className="truncate">{env.userDir}</span>
-                            </div>
-                            <div className="p-2 bg-gray-800/50 rounded flex gap-2">
-                                <span className="text-gray-500 w-24">Temp Dir:</span>
-                                <span className="truncate">{env.tempDir}</span>
-                            </div>
+                            {[
+                                ['Java Home:', env.javaHome],
+                                ['User Dir:', env.userDir],
+                                ['Temp Dir:', env.tempDir]
+                            ].map(([label, value]) => (
+                                <div key={label} className="p-2 bg-gray-800/50 rounded flex gap-2">
+                                    <span className="text-gray-500 w-24">{label}</span>
+                                    <span className="truncate">{value}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -409,32 +293,23 @@ export default function AdminMonitoring() {
             {diag && (
                 <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5">
                     <h3 className="text-sm font-medium text-gray-400 mb-4 flex items-center gap-2">
-                        <Thermometer className="w-4 h-4 text-red-400" />
-                        Diagnostics
+                        <Thermometer className="w-4 h-4 text-red-400" /> Diagnostics
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                        <div className="p-3 bg-gray-800/50 rounded-lg">
-                            <div className="text-gray-500 mb-1">Start Time</div>
-                            <div className="font-mono text-[10px]">{diag.startTime}</div>
-                        </div>
-                        <div className="p-3 bg-gray-800/50 rounded-lg">
-                            <div className="text-gray-500 mb-1">Classes Loaded</div>
-                            <div>{diag.classes?.loaded}</div>
-                        </div>
-                        <div className="p-3 bg-gray-800/50 rounded-lg">
-                            <div className="text-gray-500 mb-1">Total Classes</div>
-                            <div>{diag.classes?.totalLoaded}</div>
-                        </div>
-                        <div className="p-3 bg-gray-800/50 rounded-lg">
-                            <div className="text-gray-500 mb-1">Compilation Time</div>
-                            <div>{diag.compilation?.totalCompilationTimeMs} ms</div>
-                        </div>
+                        {[
+                            ['Start Time', diag.startTime],
+                            ['Classes Loaded', diag.classes?.loaded],
+                            ['Total Classes', diag.classes?.totalLoaded],
+                            ['Compilation Time', `${diag.compilation?.totalCompilationTimeMs} ms`]
+                        ].map(([label, value]) => (
+                            <div key={label} className="p-3 bg-gray-800/50 rounded-lg">
+                                <div className="text-gray-500 mb-1">{label}</div>
+                                <div className="font-mono text-[10px]">{value}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-
-

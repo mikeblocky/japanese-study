@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { BookOpen, Home, Menu, User as UserIcon, Search, X, Settings, Cog } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Layout() {
     const { user } = useAuth();
@@ -62,8 +62,8 @@ export default function Layout() {
                                         onClick={() => setIsMobileMenuOpen(false)}
                                         className={cn(
                                             "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors",
-                                            isActive 
-                                                ? "bg-primary text-primary-foreground" 
+                                            isActive
+                                                ? "bg-primary text-primary-foreground"
                                                 : "hover:bg-secondary text-foreground"
                                         )}
                                     >
@@ -119,8 +119,8 @@ export default function Layout() {
                                     to={item.path}
                                     className={cn(
                                         "relative px-4 py-2 rounded-lg transition-colors flex items-center gap-2",
-                                        isActive 
-                                            ? "bg-primary text-primary-foreground" 
+                                        isActive
+                                            ? "bg-primary text-primary-foreground"
                                             : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                     )}
                                 >
