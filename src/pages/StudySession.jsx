@@ -77,10 +77,10 @@ export default function StudySession() {
 
     // Elapsed time
     useEffect(() => {
-        if (!sessionId || isFinished) return;
+        if (isFinished) return;
         const timer = setInterval(() => setElapsedSeconds(prev => prev + 1), 1000);
         return () => clearInterval(timer);
-    }, [sessionId, isFinished]);
+    }, [isFinished]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -117,13 +117,6 @@ export default function StudySession() {
             setFeedback(null);
             setTypingInput('');
 
-            if (sessionId && items[currentIndex]) {
-                api.post(`/study/session/${sessionId}/submit`, {
-                    itemId: items[currentIndex].id,
-                    correct
-                }).catch(err => console.error("Failed to log item:", err));
-            }
-
             setStats(prev => ({
                 correct: correct ? prev.correct + 1 : prev.correct,
                 incorrect: !correct ? prev.incorrect + 1 : prev.incorrect
@@ -133,10 +126,6 @@ export default function StudySession() {
                 setIsFlipped(false);
                 setCurrentIndex(prev => prev + 1);
             } else {
-                if (sessionId) {
-                    api.post(`/study/session/${sessionId}/end`, { durationSeconds: elapsedSeconds })
-                        .catch(err => console.error("Failed to end session:", err));
-                }
                 setIsFinished(true);
             }
         }, 500);
