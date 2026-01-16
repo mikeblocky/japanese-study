@@ -63,6 +63,11 @@ export default function Dashboard() {
                         <Button asChild className="rounded-full px-8 bg-primary text-primary-foreground hover:opacity-90 font-medium h-12">
                             <Link to="/courses">Resume studies</Link>
                         </Button>
+                        <Button asChild variant="outline" className="rounded-full px-6 h-12 border-red-500/20 text-red-600 hover:bg-red-500/5 hover:text-red-700">
+                            <Link to="/courses/challenge/study" className="flex items-center gap-2">
+                                <Zap className="h-4 w-4 fill-current" /> Challenge
+                            </Link>
+                        </Button>
                         <Button asChild variant="outline" className="rounded-full px-6 h-12 border-primary/20 hover:bg-primary/5">
                             <Link to="/management">View stats</Link>
                         </Button>

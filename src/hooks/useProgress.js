@@ -9,11 +9,12 @@ export function useProgress() {
     const [topicProgress, setTopicProgress] = useState({});
 
 
-    const recordProgress = useCallback(async (studyItemId, correct) => {
+    const recordProgress = useCallback(async (studyItemId, correct, harshMode = false) => {
         try {
             const response = await api.post('/progress/record', {
                 studyItemId,
-                correct
+                correct,
+                harshMode
             });
             return response.data;
         } catch (err) {
