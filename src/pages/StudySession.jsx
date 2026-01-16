@@ -47,8 +47,11 @@ export default function StudySession() {
                         secondaryText: p.secondaryText,
                         meaning: p.meaning,
                         userSrsInterval: p.interval, // Current interval
-                        // ... other fields if needed for display
-                        additionalData: {} // safety
+                        // Populate additionalData so FlashcardMode displays them on the back
+                        additionalData: {
+                            "Reading": p.secondaryText,
+                            "Meaning": p.meaning
+                        }
                     }));
                 } else {
                     const res = await api.get(`/topics/${topicId}/items`);
