@@ -42,37 +42,81 @@ export default function CourseList() {
         return () => { cancelled = true; };
     }, [baseCourses]);
 
+    // Dynamic gradient generation for personality
+    // Dynamic gradient generation for personality
+    const getGradient = (index) => {
+        // Now just border colors for distinct, flat look
+        const colors = [
+            'border-orange-400',
+            'border-emerald-500',
+            'border-rose-400',
+            'border-amber-400',
+        ];
+        return colors[index % colors.length];
+    };
+
     return (
-        <PageShell className="space-y-8">
-            <PageHeader title="Courses" description="Browse the library and jump into a course." />
+        <PageShell className="space-y-8 pb-20">
+            <div className="relative">
+                <div className="absolute -left-10 top-0 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
+                <PageHeader
+                    title={<span className="font-serif italic text-4xl">The Collection</span>}
+                    description="Structured paths for your journey."
+                />
+            </div>
 
             {loading && courses.length === 0 && (
-                <div className="py-10 text-center text-muted-foreground">Loading courses…</div>
+                <div className="py-20 text-center">
+                    <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                    <p className="text-muted-foreground">Curating your courses...</p>
+                </div>
             )}
+
             {error && courses.length === 0 && (
-                <Card className="border-destructive">
+                <Card className="border-destructive bg-destructive/5">
                     <CardContent className="pt-6">
-                        <p className="text-sm text-destructive">{error}</p>
+                        <p className="text-base font-medium text-destructive">{error}</p>
                     </CardContent>
                 </Card>
             )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {courses.map((course, i) => (
-                    <Link key={course.id} to={`/courses/${course.id}`} className="block w-full">
-                        <Card className="hover:shadow-md hover:border-primary/50 transition-all group cursor-pointer h-full overflow-hidden w-full">
-                            <CardHeader className="w-full">
-                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                    <Badge variant="secondary">Level {i === 0 ? 'N5' : 'N4'}</Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                        <BookOpen className="h-3 w-3 mr-1" />
-                                        {course.topics?.length || 0} topics
+                    <Link key={course.id} to={`/courses/${course.id}`} className="block w-full group">
+                        <Card className={`h-full transition-all duration-300 hover:scale-[1.01] hover:shadow-md border-l-4 ${getGradient(i)} bg-card`}>
+                            <CardHeader className="relative overflow-hidden">
+                                <div className="flex items-center gap-2 flex-wrap mb-4">
+                                    <Badge variant="secondary" className="bg-secondary/50 border-none">
+                                        JLPT {course.level || (i === 0 ? 'N5' : 'N4')}
                                     </Badge>
-                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all ml-auto flex-shrink-0" />
+                                    <Badge variant="outline" className="bg-transparent border-primary/10 text-muted-foreground">
+                                        <BookOpen className="h-3 w-3 mr-1" />
+                                        {course.topics?.length || 0} Topics
+                                    </Badge>
+                                    {/* Visibility/Owner Badge */}
+                                    {course.visibility === 'PUBLIC' && course.ownerUsername && (
+                                        <Badge variant="outline" className="bg-transparent border-blue-400/30 text-blue-600 text-xs">
+                                            🌍 by {course.ownerUsername}
+                                        </Badge>
+                                    )}
+                                    {course.visibility === 'PRIVATE' && (
+                                        <Badge variant="outline" className="bg-transparent border-orange-400/30 text-orange-600 text-xs">
+                                            🔒 Private
+                                        </Badge>
+                                    )}
                                 </div>
-                                <h3 className="group-hover:text-primary transition-colors mb-2 text-base font-semibold leading-snug w-full break-anywhere">
+
+                                <h3 className="text-2xl font-bold tracking-tight mb-2 group-hover:text-primary transition-colors">
                                     {course.title}
                                 </h3>
-                                <CardDescription className="line-clamp-2">{course.description}</CardDescription>
+
+                                <CardDescription className="text-muted-foreground leading-relaxed font-medium">
+                                    {course.description || "Comprehensive Japanese course covering vocabulary, grammar, and kanji reading practice."}
+                                </CardDescription>
+
+                                <div className="mt-6 flex items-center text-sm font-semibold text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                    Start Learning <ArrowRight className="ml-2 h-4 w-4" />
+                                </div>
                             </CardHeader>
                         </Card>
                     </Link>

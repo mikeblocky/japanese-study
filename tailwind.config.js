@@ -57,8 +57,9 @@ export default {
                 sm: "calc(var(--radius) - 4px)",
             },
             fontFamily: {
-                sans: ['"Google Sans Flex"', '"Inter"', 'sans-serif'],
-                mono: ['"Code"', '"Fira Code"', 'monospace'],
+                sans: ['"Geist Sans"', '"IBM Plex Serif"', 'sans-serif'],
+                mono: ['"Geist Mono"', 'monospace'],
+                serif: ['"IBM Plex Serif"', 'serif'],
             },
             keyframes: {
                 "accordion-down": {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Check, FolderOpen, List } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useTopics } from '@/hooks/useTopics';
-import { useForm } from '@/hooks/useForm';
+
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,25 @@ export default function LessonsTab() {
     // Custom hooks!
     const { courses } = useCourses();
     const { topics, loadTopics, addTopic, updateTopic, deleteTopic } = useTopics(selectedCourse?.id);
-    const { values, handleChange, reset, setValues } = useForm({
+    const [values, setValues] = useState({
         title: '',
         description: '',
         orderIndex: 1,
         courseId: ''
     });
+
+    const handleChange = (name, value) => {
+        setValues(prev => ({ ...prev, [name]: value }));
+    };
+
+    const reset = () => {
+        setValues({
+            title: '',
+            description: '',
+            orderIndex: 1,
+            courseId: ''
+        });
+    };
     const toast = useToast();
 
     useEffect(() => {
@@ -213,47 +226,63 @@ export default function LessonsTab() {
             )}
 
             {selectedCourse && topics.length > 0 && (
-                <div className="space-y-3">
-                    {topics.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map((topic, i) => (
-                        <Card key={topic.id} className="hover:bg-accent transition-colors">
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary font-mono text-sm font-semibold shrink-0">
-                                        {String(i + 1).padStart(2, '0')}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium">{topic.title}</p>
-                                        <p className="text-sm text-muted-foreground line-clamp-1">
-                                            {topic.description || 'No description'}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-1 shrink-0">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEdit(topic)}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            <Edit2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(topic.id)}
-                                            disabled={deleteLoading === `topic-${topic.id}`}
-                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                        >
-                                            {deleteLoading === `topic-${topic.id}` ? (
-                                                <div className="h-3.5 w-3.5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                                            ) : (
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="border rounded-md overflow-hidden bg-card">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-secondary/50 text-muted-foreground font-medium border-b">
+                                <tr>
+                                    <th className="px-4 py-3 w-[60px]">#</th>
+                                    <th className="px-4 py-3 w-[80px]">ID</th>
+                                    <th className="px-4 py-3">Lesson Title</th>
+                                    <th className="px-4 py-3">Description</th>
+                                    <th className="px-4 py-3 w-[100px] text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {topics.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map((topic, i) => (
+                                    <tr key={topic.id} className="hover:bg-secondary/20 transition-colors">
+                                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground text-center">
+                                            {String(topic.orderIndex || i + 1).padStart(2, '0')}
+                                        </td>
+                                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                                            {topic.id}
+                                        </td>
+                                        <td className="px-4 py-2 font-medium text-foreground">
+                                            {topic.title}
+                                        </td>
+                                        <td className="px-4 py-2 text-muted-foreground truncate max-w-[250px]" title={topic.description}>
+                                            {topic.description || '-'}
+                                        </td>
+                                        <td className="px-4 py-2 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleEdit(topic)}
+                                                    className="h-7 w-7 p-0"
+                                                >
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(topic.id)}
+                                                    disabled={deleteLoading === `topic-${topic.id}`}
+                                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                                >
+                                                    {deleteLoading === `topic-${topic.id}` ? (
+                                                        <div className="h-3 w-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 

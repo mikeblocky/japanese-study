@@ -12,6 +12,7 @@ export default function ImportTab() {
     const [importing, setImporting] = useState(false);
     const [result, setResult] = useState(null);
     const [progress, setProgress] = useState(null);
+    const [visibility, setVisibility] = useState('PRIVATE');
 
     const { loadCourses } = useCourses(false); // Don't auto-load
     const toast = useToast();
@@ -50,6 +51,7 @@ export default function ImportTab() {
             formData.append('file', ankiFile);
             formData.append('skipMedia', 'true');
             formData.append('textOnly', 'true');
+            formData.append('visibility', visibility);
 
             setProgress('Processing deck...');
 
@@ -177,6 +179,37 @@ export default function ImportTab() {
                         )}
                     </div>
 
+                    {/* Visibility Selector */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium">
+                            Visibility
+                        </label>
+                        <div className="flex gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="visibility"
+                                    value="PRIVATE"
+                                    checked={visibility === 'PRIVATE'}
+                                    onChange={(e) => setVisibility(e.target.value)}
+                                    className="h-4 w-4 text-primary"
+                                />
+                                <span className="text-sm">🔒 Private (only you)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="visibility"
+                                    value="PUBLIC"
+                                    checked={visibility === 'PUBLIC'}
+                                    onChange={(e) => setVisibility(e.target.value)}
+                                    className="h-4 w-4 text-primary"
+                                />
+                                <span className="text-sm">🌍 Public (visible to all)</span>
+                            </label>
+                        </div>
+                    </div>
+
                     {progress && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -266,15 +299,15 @@ export default function ImportTab() {
                         <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                         <div>
                             <CardTitle className="text-base">How to export from Anki</CardTitle>
-                            <CardDescription className="mt-1.5 space-y-1">
-                                <p>1. Open Anki Desktop</p>
-                                <p>2. Select the deck you want to export</p>
-                                <p>3. Click <strong>File → Export</strong></p>
-                                <p>4. Export format: <strong>Anki Deck Package (*.apkg)</strong></p>
-                                <p>5. Uncheck "Include scheduling information"</p>
-                                <p>6. Click <strong>Export</strong> and select a location</p>
-                                <p>7. Upload the .apkg file here</p>
-                            </CardDescription>
+                            <div className="mt-1.5 space-y-1 text-sm text-muted-foreground">
+                                <div>1. Open Anki Desktop</div>
+                                <div>2. Select the deck you want to export</div>
+                                <div>3. Click <strong>File → Export</strong></div>
+                                <div>4. Export format: <strong>Anki Deck Package (*.apkg)</strong></div>
+                                <div>5. Uncheck "Include scheduling information"</div>
+                                <div>6. Click <strong>Export</strong> and select a location</div>
+                                <div>7. Upload the .apkg file here</div>
+                            </div>
                         </div>
                     </div>
                 </CardHeader>

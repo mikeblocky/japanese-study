@@ -2,15 +2,21 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { BookOpen, Home, Menu, User as UserIcon, Search, X, Settings, Cog } from 'lucide-react';
+import {
+    BookOpen, Home, Search, Settings,
+    PanelLeftClose, PanelLeftOpen, Menu, X,
+    LogOut, User as UserIcon
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 export default function Layout() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
 
-    // Close menu on route change
+    // Close mobile menu on route change
     useEffect(() => {
         setIsMobileMenuOpen(false);
     }, [location.pathname]);
@@ -18,40 +24,30 @@ export default function Layout() {
     const navItems = [
         { label: 'Dashboard', path: '/', icon: Home },
         { label: 'Courses', path: '/courses', icon: BookOpen },
-        { label: 'Words', path: '/console', icon: Search },
-        { label: 'Management', path: '/management', icon: Cog },
-        { label: 'Settings', path: '/settings', icon: Settings },
+
+        { label: 'Management', path: '/management', icon: Settings }, // Explicitly added Management/Manage back
     ];
 
-    // Mobile menu portal (kept simple for a static feel)
+    // Mobile Menu Portal
     const MobileMenu = () => {
         if (typeof document === 'undefined') return null;
-
         return createPortal(
             isMobileMenuOpen ? (
                 <>
                     <div
-                        className="fixed inset-0 bg-black/40 z-[9998] md:hidden animate-in fade-in duration-200"
+                        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
                         onClick={() => setIsMobileMenuOpen(false)}
                     />
-                    <div className="fixed inset-y-0 right-0 w-[280px] z-[9999] md:hidden flex flex-col overflow-hidden bg-background border-l shadow-xl animate-in slide-in-from-right duration-300">
-                        <div className="flex items-center justify-between px-4 py-4 border-b">
-                            <div className="flex items-center gap-2.5">
-                                <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-                                    <BookOpen className="h-5 w-5 text-primary-foreground" />
-                                </div>
-                                <span className="font-bold text-lg tracking-tight">mystudy</span>
+                    <div className="fixed inset-y-0 left-0 w-[280px] z-50 md:hidden bg-background border-r p-4 flex flex-col shadow-2xl animate-in slide-in-from-left duration-300">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-2">
+                                <span className="font-serif font-bold text-xl text-primary tracking-tight">Manage</span>
                             </div>
-                            <button
-                                className="p-2 rounded-lg hover:bg-secondary transition-colors"
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                aria-label="Close menu"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
+                                <X className="h-5 w-5" />
+                            </Button>
                         </div>
-
-                        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+                        <nav className="space-y-1">
                             {navItems.map((item) => {
                                 const Icon = item.icon;
                                 const isActive = location.pathname === item.path;
@@ -59,31 +55,57 @@ export default function Layout() {
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        onClick={() => setIsMobileMenuOpen(false)}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors",
+                                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                                             isActive
-                                                ? "bg-primary text-primary-foreground"
-                                                : "hover:bg-secondary text-foreground"
+                                                ? "bg-secondary text-primary"
+                                                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                                         )}
                                     >
-                                        <Icon className="w-5 h-5" />
-                                        <span>{item.label}</span>
+                                        <Icon className="h-4 w-4" />
+                                        {item.label}
                                     </Link>
                                 );
                             })}
-                        </div>
+                        </nav>
 
-                        <div className="border-t px-4 py-4">
-                            <div className="flex items-center gap-3 rounded-lg bg-secondary px-3 py-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
-                                    <UserIcon className="h-4 w-4 text-primary" />
+                        <div className="mt-auto pt-4 border-t space-y-2">
+                            {user ? (
+                                <>
+                                    <div className="flex items-center gap-3 px-2 py-2">
+                                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{user.username}</p>
+                                            <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full justify-start gap-3 px-2"
+                                        onClick={logout}
+                                    >
+                                        <LogOut className="h-5 w-5 text-muted-foreground" />
+                                        Sign out
+                                    </Button>
+                                </>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Link to="/login" className="w-full">
+                                        <Button variant="outline" className="w-full justify-start gap-3">
+                                            <UserIcon className="h-4 w-4" />
+                                            Log in
+                                        </Button>
+                                    </Link>
+                                    <Link to="/signup" className="w-full">
+                                        <Button className="w-full justify-start gap-3">
+                                            <UserIcon className="h-4 w-4" />
+                                            Sign up
+                                        </Button>
+                                    </Link>
                                 </div>
-                                <div className="flex-1">
-                                    <div className="text-sm font-medium">{user ? user.username : 'Guest'}</div>
-                                    <div className="text-xs text-muted-foreground">{user?.role || 'Visitor'}</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </>
@@ -93,71 +115,122 @@ export default function Layout() {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground font-sans">
-            {/* Mobile Menu Portal */}
+        <div className="min-h-screen bg-background flex">
+            {/* Mobile Menu */}
             <MobileMenu />
 
-            {/* Top Navbar */}
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
-                <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:px-10">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2.5 group">
-                        <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-                            <BookOpen className="h-5 w-5 text-primary-foreground" />
+            {/* Desktop Sidebar */}
+            <aside
+                className={cn(
+                    "hidden md:flex flex-col border-r bg-background h-screen sticky top-0 transition-all duration-300 ease-in-out z-30",
+                    isCollapsed ? "w-[60px]" : "w-[240px]"
+                )}
+            >
+                <div className="h-14 flex items-center px-4 border-b border-border/40">
+                    {!isCollapsed && (
+                        <div className="flex items-center gap-2 ml-1">
+                            {/* Plain text 'Manage' as requested */}
+                            <span className="font-serif font-bold text-2xl text-primary tracking-tight">Manage</span>
                         </div>
-                        <span className="font-bold text-xl tracking-tight">mystudy</span>
-                    </Link>
-
-                    {/* Desktop Nav */}
-                    <nav className="hidden md:flex gap-2 text-sm font-medium">
-                        {navItems.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = location.pathname === item.path;
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={cn(
-                                        "relative px-4 py-2 rounded-lg transition-colors flex items-center gap-2",
-                                        isActive
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                                    )}
-                                >
-                                    <Icon className="h-4 w-4" />
-                                    <span>{item.label}</span>
-                                </Link>
-                            );
-                        })}
-                    </nav>
-
-                    <div className="flex items-center gap-3">
-                        {/* User Profile */}
-                        <div className="hidden md:flex items-center gap-2.5 px-3 py-2 bg-secondary rounded-lg">
-                            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                                <UserIcon className="w-4 h-4 text-primary" />
-                            </div>
-                            <div className="text-sm font-medium">
-                                {user ? user.username : 'Guest'}
-                            </div>
-                        </div>
-
-                        {/* Mobile Menu Button */}
-                        <button
-                            className="md:hidden p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
-                            onClick={() => setIsMobileMenuOpen(true)}
-                            aria-label="Open menu"
-                        >
-                            <Menu className="w-5 h-5" />
-                        </button>
-                    </div>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn("ml-auto h-8 w-8 text-muted-foreground", isCollapsed && "mx-auto")}
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                    >
+                        {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                    </Button>
                 </div>
-            </header>
 
-            {/* Main Content */}
-            <main className="container mx-auto">
-                <Outlet />
-            </main>
+                <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+                        const label = item.label === 'Management' ? 'Manage' : item.label;
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                title={isCollapsed ? label : undefined}
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-colors group relative", // Increased to py-3 and text-base
+                                    isActive
+                                        ? "bg-secondary text-primary font-bold"
+                                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+                                    isCollapsed && "justify-center px-2"
+                                )}
+                            >
+                                <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+                                {!isCollapsed && <span>{label}</span>}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                <div className="p-2 border-t border-border/40 space-y-1">
+                    {user ? (
+                        <>
+                            <div className={cn(
+                                "flex items-center gap-2 p-2 rounded-lg transition-colors",
+                                isCollapsed ? "justify-center" : "px-3"
+                            )}>
+                                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                {!isCollapsed && (
+                                    <div className="flex-1 min-w-0 overflow-hidden">
+                                        <p className="text-sm font-medium truncate text-foreground">{user.username}</p>
+                                        <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    "w-full justify-start gap-3 px-3",
+                                    isCollapsed && "justify-center px-2"
+                                )}
+                                onClick={logout}
+                                title="Sign out"
+                            >
+                                <LogOut className="h-5 w-5 shrink-0 text-muted-foreground" />
+                                {!isCollapsed && <span>Sign out</span>}
+                            </Button>
+                        </>
+                    ) : (
+                        <div className={cn("space-y-2", isCollapsed && "flex flex-col items-center space-y-2")}>
+                            <Link to="/login" className="w-full">
+                                <Button variant="outline" className={cn("w-full justify-start gap-3", isCollapsed && "justify-center px-0")}>
+                                    <UserIcon className="h-4 w-4" />
+                                    {!isCollapsed && "Log in"}
+                                </Button>
+                            </Link>
+                            <Link to="/signup" className="w-full">
+                                <Button className={cn("w-full justify-start gap-3", isCollapsed && "justify-center px-0")}>
+                                    <UserIcon className="h-4 w-4" />
+                                    {!isCollapsed && "Sign up"}
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Mobile Header */}
+                <header className="md:hidden h-14 border-b flex items-center px-4 bg-background sticky top-0 z-20">
+                    <Button variant="ghost" size="icon" className="-ml-2" onClick={() => setIsMobileMenuOpen(true)}>
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                    <span className="font-serif font-bold text-xl text-primary ml-2 tracking-tight">Manage</span>
+                </header>
+
+                <main className="flex-1 px-4 sm:px-6 py-6 lg:px-8 max-w-7xl mx-auto w-full">
+                    <Outlet />
+                </main>
+            </div>
         </div>
     );
 }

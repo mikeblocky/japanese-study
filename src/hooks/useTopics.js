@@ -1,10 +1,7 @@
 import { useState, useCallback } from 'react';
 import api from '@/lib/api';
 
-/**
- * Custom hook for managing topics
- * Provides CRUD operations for topics within courses
- */
+
 export function useTopics(courseId = null) {
     const [topics, setTopics] = useState([]);
     const [loading, setLoading] = useState(false);

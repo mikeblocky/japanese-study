@@ -39,54 +39,77 @@ export default function CourseDetail() {
             });
     }, [courseId]);
 
-    if (loading) return <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground font-light text-xl">Loading curriculum...</div>;
+    if (loading) return (
+        <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-muted-foreground font-medium">Loading curriculum...</span>
+        </div>
+    );
 
     return (
-        <PageShell className="space-y-8">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-                <Link to="/courses">
+        <PageShell className="pb-20">
+            <Button asChild variant="ghost" size="sm" className="-ml-2 mb-6">
+                <Link to="/courses" className="text-muted-foreground hover:text-foreground">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to courses
                 </Link>
             </Button>
 
-            <div className="space-y-1.5 sm:space-y-3 mb-6 sm:mb-8">
-                <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground break-anywhere">
-                    {course?.title || `Course ${courseId}`}
-                </h1>
-                <p className="text-sm sm:text-lg text-muted-foreground">
-                    {course?.description || 'Select a lesson to start studying.'}
-                </p>
+            {/* Course Header */}
+            <div className="relative mb-12 py-8">
+                {/* Clean, no gradients */}
+                <div className="max-w-3xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-widest uppercase mb-6">
+                        Study Path
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-serif text-primary mb-6 leading-tight">
+                        {course?.title || `Course ${courseId}`}
+                    </h1>
+                    <p className="text-xl text-muted-foreground font-serif leading-relaxed italic border-l-4 border-primary/20 pl-6">
+                        {course?.description || 'A structured path to mastery.'}
+                    </p>
+                </div>
             </div>
 
-            <Card>
-                <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-6">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold">Curriculum</h3>
-                        <Badge variant="secondary">{topics.length} lessons</Badge>
+            <div className="grid gap-6">
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center justify-between px-2 mb-4">
+                        <h3 className="text-2xl font-serif text-foreground flex items-center gap-3">
+                            Curriculum
+                            <span className="text-muted-foreground text-lg font-normal italic font-sans">({topics.length} chapters)</span>
+                        </h3>
                     </div>
-                    <Separator className="mb-6" />
-                    <div className="space-y-3">
-                        {topics.map((topic, i) => (
-                            <Link
-                                key={topic.id}
-                                to={`/study/${topic.id}`}
-                                className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all group"
-                            >
-                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary font-mono text-sm font-semibold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                                    {String(i + 1).padStart(2, '0')}
-                                </div>
-                                <div className="flex-1 min-w-0 overflow-hidden">
-                                    <p className="font-medium group-hover:text-primary transition-colors break-anywhere line-clamp-1">{topic.title}</p>
-                                    <p className="text-sm text-muted-foreground line-clamp-1">{topic.description || 'No description provided.'}</p>
-                                </div>
-                                <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                            </Link>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                </div>
+
+                <div className="grid gap-3">
+                    {topics.map((topic, i) => (
+                        <Link
+                            key={topic.id}
+                            to={`/study/${topic.id}`}
+                            className="group relative flex items-center gap-6 p-5 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                        >
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary group-hover:bg-primary group-hover:text-primary-foreground transition-colors font-mono font-bold text-lg">
+                                {String(i + 1).padStart(2, '0')}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-lg group-hover:text-primary transition-colors truncate">
+                                    {topic.title}
+                                </h4>
+                                <p className="text-muted-foreground text-sm line-clamp-1">
+                                    {topic.description || "Vocabulary and grammar practice"}
+                                </p>
+                            </div>
+
+                            <div className="shrink-0 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                <Button size="icon" className="rounded-full h-10 w-10">
+                                    <PlayCircle className="h-5 w-5 fill-current" />
+                                </Button>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
         </PageShell>
     );
 }

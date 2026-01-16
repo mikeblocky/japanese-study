@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 
-/**
- * Custom hook for managing courses with their topics.
- * Fetches courses and their topics in one call.
- */
+
 export function useCourses(autoLoad = true) {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(false);

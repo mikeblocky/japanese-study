@@ -1,87 +1,71 @@
 import { cn } from '@/lib/utils';
-import Furigana from '@/components/Furigana';
 import { Check, X } from 'lucide-react';
-import { getTextSize } from './StudyComponents';
 
-/**
- * Flashcard mode for study sessions.
- * Shows term on front, meaning/reading on back.
- */
-export default function FlashcardMode({
-    displayContent,
-    isFlipped,
-    onFlip,
-    onAnswer,
-    feedback,
-    showFurigana
-}) {
+export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback }) {
+    const allFields = Object.entries(additionalData || {}).filter(([key, value]) =>
+        value && String(value).trim() !== ''
+    );
+
+    const formatContent = (text) => {
+        if (!text) return [];
+        // Split by em-dash followed by Japanese character, or by existing newlines
+        return String(text)
+            .split(/(?=一|二|三|四|五|六|七|八|九|十)|—(?=[^\s])|\n/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-xl mx-auto pb-10">
             <div
                 className={cn(
-                    "relative min-h-[400px] rounded-2xl p-8 sm:p-12 cursor-pointer border-2 transition-all",
-                    feedback === 'correct' && "border-green-500 bg-green-50/50",
-                    feedback === 'incorrect' && "border-red-500 bg-red-50/50",
-                    !feedback && "border-border hover:border-primary/50 hover:shadow-lg bg-card"
+                    "w-full rounded-2xl bg-card border border-border p-6 cursor-pointer",
+                    feedback === 'correct' && "border-emerald-500",
+                    feedback === 'incorrect' && "border-red-500"
                 )}
                 onClick={() => !feedback && onFlip()}
             >
                 {!isFlipped ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px]">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground mb-8">
-                            Term
-                        </span>
-                        <h2 className={cn("font-bold text-foreground leading-tight", getTextSize(displayContent.term))}>
-                            <Furigana
-                                text={displayContent.term}
-                                reading={displayContent.reading}
-                                show={showFurigana}
-                            />
-                        </h2>
-                        <p className="mt-auto text-sm text-muted-foreground">
-                            Click or press Space to reveal
-                        </p>
+                    <div className="text-center py-8">
+                        <span className="text-xs text-muted-foreground uppercase mb-4 block">Term</span>
+                        <h2 className="text-4xl font-bold">{displayContent.term}</h2>
+                        <p className="text-sm text-muted-foreground mt-6">Tap to reveal</p>
                     </div>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center min-h-[350px] space-y-8">
-                        <div className="space-y-3">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                                Meaning
-                            </span>
-                            <p className={cn("text-foreground font-semibold", getTextSize(displayContent.english, 'medium'))}>
-                                {displayContent.english || '—'}
-                            </p>
-                        </div>
-
-                        <div className="w-20 h-px bg-border" />
-
-                        <div className="space-y-3">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                                Reading
-                            </span>
-                            <p className={cn("text-foreground", getTextSize(displayContent.reading, 'medium'))}>
-                                {displayContent.reading || '—'}
-                            </p>
-                        </div>
+                    <div className="space-y-4">
+                        {allFields.map(([key, value]) => {
+                            const lines = formatContent(value);
+                            return (
+                                <div key={key} className="border-b border-border/50 pb-4 last:border-0">
+                                    <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">{key}</div>
+                                    <div className="space-y-2">
+                                        {lines.map((line, i) => (
+                                            <div key={i} className="text-base leading-relaxed">{line}</div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {allFields.length === 0 && (
+                            <div className="text-center py-4 text-muted-foreground">No data</div>
+                        )}
                     </div>
                 )}
             </div>
 
             {isFlipped && !feedback && (
-                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                <div className="flex items-center justify-center gap-6">
                     <button
                         onClick={() => onAnswer(false)}
-                        className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all font-medium"
+                        className="h-12 w-12 rounded-full border-2 border-red-200 text-red-500 flex items-center justify-center"
                     >
                         <X className="w-5 h-5" />
-                        Again
                     </button>
                     <button
                         onClick={() => onAnswer(true)}
-                        className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all font-medium shadow-lg shadow-primary/20"
+                        className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center"
                     >
                         <Check className="w-5 h-5" />
-                        Got it
                     </button>
                 </div>
             )}

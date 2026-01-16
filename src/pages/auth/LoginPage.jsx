@@ -1,123 +1,61 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { LogIn, ArrowRight } from 'lucide-react';
-import InteractiveDotGrid from '@/components/ui/InteractiveDotGrid';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 
-const LoginPage = () => {
+export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
+    const { success, error } = useToast();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
-        const res = await login(username, password);
-        setLoading(false);
-        if (res.success) {
+        setIsLoading(true);
+        const result = await login(username, password);
+        if (result.success) {
+            success("Welcome back! Successfully logged in.");
             navigate('/');
         } else {
-            setError(res.message);
+            error(result.message || "Login failed");
         }
+        setIsLoading(false);
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFDFD] text-slate-800 flex items-center justify-center p-6 relative overflow-hidden font-sans">
-            {/* Background Effects */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                {/* Subtle gradient blobs for depth */}
-                <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-indigo-50/50 rounded-full blur-[120px] mix-blend-multiply opacity-60" />
-                <div className="absolute top-[30%] -right-[10%] w-[60vw] h-[60vw] bg-purple-50/50 rounded-full blur-[120px] mix-blend-multiply opacity-60" />
-            </div>
-
-            {/* Interactive Dot Grid */}
-            <InteractiveDotGrid />
-
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-md relative z-10"
-            >
-                <Card className="bg-white/90 backdrop-blur-xl shadow-2xl">
-                    <CardHeader className="space-y-1">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                                <LogIn className="w-5 h-5 text-primary" />
-                            </div>
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Login</CardTitle>
+                    <CardDescription>Enter your credentials to access your study account</CardDescription>
+                </CardHeader>
+                <form onSubmit={handleSubmit}>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Username</Label>
+                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
                         </div>
-                        <CardTitle className="text-2xl">Welcome back</CardTitle>
-                        <CardDescription>Enter your credentials to continue</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20"
-                                >
-                                    {error}
-                                </motion.div>
-                            )}
-
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Username</Label>
-                                <Input
-                                    id="username"
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Enter your username"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
-                                    required
-                                />
-                            </div>
-
-                            <Button type="submit" disabled={loading} className="w-full">
-                                {loading ? (
-                                    'Signing in...'
-                                ) : (
-                                    <>
-                                        Sign in
-                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                    </>
-                                )}
-                            </Button>
-                        </form>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        </div>
                     </CardContent>
-                    <CardFooter className="flex justify-center">
-                        <p className="text-sm text-muted-foreground">
-                            Don't have an account?{' '}
-                            <Link to="/signup" className="font-medium text-primary hover:underline">
-                                Sign up
-                            </Link>
+                    <CardFooter className="flex flex-col gap-4">
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading ? "Logging in..." : "Login"}
+                        </Button>
+                        <p className="text-sm text-center text-muted-foreground">
+                            Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
                         </p>
                     </CardFooter>
-                </Card>
-            </motion.div>
+                </form>
+            </Card>
         </div>
     );
-};
-
-export default LoginPage;
+}

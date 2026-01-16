@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 import { PageShell, PageHeader } from '@/components/ui/page';
 import CoursesTab from './management/CoursesTab';
 import LessonsTab from './management/LessonsTab';
-import QuickAddTab from './management/QuickAddTab';
+
+import VocabularyTab from './management/VocabularyTab';
 import ImportTab from './management/ImportTab';
 
 export default function ManagementPage() {
@@ -13,7 +14,7 @@ export default function ManagementPage() {
     const tabs = [
         { id: 'courses', label: 'Courses', icon: BookOpen, component: CoursesTab },
         { id: 'lessons', label: 'Lessons', icon: List, component: LessonsTab },
-        { id: 'words', label: 'Quick Add', icon: FileText, component: QuickAddTab },
+        { id: 'vocabulary', label: 'Vocabulary', icon: FileText, component: VocabularyTab },
         { id: 'import', label: 'Import', icon: Upload, component: ImportTab },
     ];
 
