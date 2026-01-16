@@ -1,22 +1,28 @@
 import api from '@/lib/api';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Swords, Trophy, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProgress } from '@/hooks/useProgress';
 
 // Extracted components
 import { StudyProgress, StudyStats, getDisplayContent } from '@/components/study/StudyComponents';
 import FlashcardMode from '@/components/study/FlashcardMode';
+import { Button } from '@/components/ui/button';
 
 export default function StudySession() {
     const { topicId } = useParams();
     const { recordProgress } = useProgress();
+    const isChallenge = topicId === 'challenge';
 
     // Core state
     const [queue, setQueue] = useState([]);
     const [initialCount, setInitialCount] = useState(0);
     const [completedCount, setCompletedCount] = useState(0);
+
+    // History Tracking for Report Card
+    // Format: { item, correct, oldInterval, newInterval }
+    const [sessionHistory, setSessionHistory] = useState([]);
 
     // UI state
     const [isFlipped, setIsFlipped] = useState(false);
@@ -27,33 +33,51 @@ export default function StudySession() {
 
     // Fetch items on mount
     useEffect(() => {
-        const fetchUrl = `/topics/${topicId}/items`;
-        setLoading(true);
+        const fetchItems = async () => {
+            setLoading(true);
+            try {
+                let items = [];
+                if (isChallenge) {
+                    const res = await api.get('/progress/challenge?limit=20');
+                    // Transform ProgressResponse to StudyItem-like shape if needed
+                    // Backend returns ProgressResponse which contains item fields
+                    items = res.data.map(p => ({
+                        id: p.studyItemId,
+                        primaryText: p.primaryText,
+                        secondaryText: p.secondaryText,
+                        userSrsInterval: p.interval, // Current interval
+                        // ... other fields if needed for display
+                        additionalData: {} // safety
+                    }));
+                } else {
+                    const res = await api.get(`/topics/${topicId}/items`);
+                    items = res.data;
+                }
 
-        api.get(fetchUrl)
-            .then(res => {
-                let items = res.data.length > 0 ? res.data : [];
-
-                // --- ALGORITHM: SRS Weighted Shuffle ---
-                // 1. Sort by SRS Level (ascending - lower/harder first)
-                // 2. Add random jitter so it's not strictly deterministic
-                items.sort((a, b) => {
-                    const levelA = a.userSrsInterval || 0;
-                    const levelB = b.userSrsInterval || 0;
-                    if (levelA === levelB) return Math.random() - 0.5; // Pure shuffle for same level
-                    return levelA - levelB; // Harder (lower level) first
-                });
+                if (items.length > 0) {
+                    // --- ALGORITHM: SRS Weighted Shuffle (Skip for Challenge as backend shuffles) ---
+                    if (!isChallenge) {
+                        items.sort((a, b) => {
+                            const levelA = a.userSrsInterval || 0;
+                            const levelB = b.userSrsInterval || 0;
+                            if (levelA === levelB) return Math.random() - 0.5;
+                            return levelA - levelB;
+                        });
+                    }
+                }
 
                 setQueue(items);
                 setInitialCount(items.length);
-                setLoading(false);
-            })
-            .catch(err => {
+            } catch (err) {
                 console.error("Fetch error:", err);
                 setQueue([]);
+            } finally {
                 setLoading(false);
-            });
-    }, [topicId]);
+            }
+        };
+
+        fetchItems();
+    }, [topicId, isChallenge]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -79,14 +103,30 @@ export default function StudySession() {
 
         const currentItem = queue[0];
 
-        // Record progress to backend (non-blocking)
-        // We only record the FIRST attempt result for valid spaced repetition stats
-        // If it's a retry (not implemented yet to track "isRetry"), we still send it, backend handles logic.
-        // Ideally we track 'hasBeenAttempted' to avoid double-penalizing or double-rewarding in one session.
+        let newInterval = currentItem.userSrsInterval;
+
+        // Record progress
         if (currentItem?.id) {
-            recordProgress(currentItem.id, correct).catch(err => {
+            try {
+                // Pass harshMode = isChallenge
+                const result = await recordProgress(currentItem.id, correct, isChallenge);
+                newInterval = result.interval;
+
+                // Track for Report Card (Only first attempt counts for history)
+                // We check if this item ID is already in history to avoid dups from retries
+                setSessionHistory(prev => {
+                    if (prev.find(h => h.item.id === currentItem.id)) return prev;
+                    return [...prev, {
+                        item: currentItem,
+                        correct,
+                        oldInterval: currentItem.userSrsInterval || 0,
+                        newInterval: result.interval
+                    }];
+                });
+
+            } catch (err) {
                 console.warn('Failed to record progress:', err);
-            });
+            }
         }
 
         setTimeout(() => {
@@ -100,15 +140,12 @@ export default function StudySession() {
 
             // --- ALGORITHM: Retry Logic ---
             const nextQueue = [...queue];
-            const processedItem = nextQueue.shift(); // Remove current
+            const processedItem = nextQueue.shift();
 
             if (correct) {
-                // Determine if done
                 setCompletedCount(prev => prev + 1);
             } else {
-                // Incorrect: Re-queue
-                // Insert back into queue, but not immediately (delayed by min(5, len))
-                // This SRS style ensures you see it again before session end.
+                // Re-queue logic
                 const insertIndex = Math.min(nextQueue.length, 3 + Math.floor(Math.random() * 3));
                 nextQueue.splice(insertIndex, 0, processedItem);
             }
@@ -118,32 +155,34 @@ export default function StudySession() {
             if (nextQueue.length === 0) {
                 setIsFinished(true);
             }
-        }, 500); // Animation delay
+        }, 500);
     };
 
-    // Loading / Empty
+    // Loading
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
-                <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3" />
-                Prepare your mind...
+            <div className="min-h-[60vh] flex flex-col items-center justify-center text-muted-foreground space-y-4">
+                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <p className="font-serif italic animate-pulse">Summoning words...</p>
             </div>
         );
     }
 
+    // Empty State
     if (initialCount === 0 && !loading) {
-        if (topicId === 'review') {
+        if (isChallenge) {
             return (
                 <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="text-6xl opacity-80">🍃</div>
-                    <h2 className="text-3xl font-serif text-primary mb-2">Tranquility.</h2>
-                    <p className="text-xl text-muted-foreground font-serif italic">Your reviews are complete for now.</p>
-                    <Link to="/" className="mt-6 px-8 py-3 rounded-full bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors font-serif">
-                        Return home
-                    </Link>
+                    <Trophy className="w-16 h-16 text-yellow-500 opacity-50 mb-2" />
+                    <h2 className="text-2xl font-bold">Arena Empty</h2>
+                    <p className="text-muted-foreground">You haven't studied any cards yet!</p>
+                    <Button asChild className="mt-4 rounded-full">
+                        <Link to="/courses">Go Study</Link>
+                    </Button>
                 </div>
             );
         }
+        // ... existing empty states ...
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
                 <div className="text-muted-foreground">This course / topic has no words yet.</div>
@@ -152,21 +191,89 @@ export default function StudySession() {
         );
     }
 
-    // Finished
+    // Finished - Report Card View
     if (isFinished) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
-                <StudyStats correct={stats.correct} incorrect={stats.incorrect} total={initialCount} />
-                <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold">Session Complete!</h2>
-                    <p className="text-muted-foreground">You've cleared the queue.</p>
+            <div className="max-w-3xl mx-auto py-10 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="text-center mb-10">
+                    <h2 className="text-3xl font-bold font-serif mb-2 flex items-center justify-center gap-3">
+                        {isChallenge ? <Swords className="h-8 w-8 text-red-500" /> : <Trophy className="h-8 w-8 text-yellow-500" />}
+                        {isChallenge ? "Arena Conquered" : "Session Complete"}
+                    </h2>
+                    <p className="text-muted-foreground">
+                        {isChallenge ? "You survived the harsh trials." : "Knowledge secured."}
+                    </p>
                 </div>
-                <div className="flex gap-4 flex-wrap justify-center">
-                    <Link to="/courses" className="px-6 py-2.5 rounded-full border border-border hover:bg-secondary transition-colors text-sm font-medium">
-                        Explore courses
+
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
+                        <div className="text-3xl font-bold text-green-600">{stats.correct}</div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-green-600/70">Correct</div>
+                    </div>
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
+                        <div className="text-3xl font-bold text-red-600">{stats.incorrect}</div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-red-600/70">Incorrect</div>
+                    </div>
+                </div>
+
+                {/* Detailed Report Card */}
+                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b bg-muted/40 font-medium text-sm flex justify-between items-center">
+                        <span>Battle Log</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-widest">SRS Delta</span>
+                    </div>
+                    <div className="divide-y">
+                        {sessionHistory.map((record, idx) => {
+                            const delta = record.newInterval - record.oldInterval;
+                            const isLoss = delta < 0;
+                            const isGain = delta > 0;
+
+                            return (
+                                <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-muted/20 transition-colors">
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className={cn(
+                                                "w-2 h-2 rounded-full shrink-0",
+                                                record.correct ? "bg-green-500" : "bg-red-500"
+                                            )} />
+                                            <div className="font-medium truncate text-base">
+                                                {record.item.primaryText}
+                                            </div>
+                                        </div>
+                                        <div className="text-sm text-muted-foreground pl-5 truncate">
+                                            {record.item.secondaryText}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 shrink-0 font-mono text-sm">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-xs text-muted-foreground line-through opacity-50">
+                                                Lv.{record.oldInterval}
+                                            </span>
+                                            <span className="font-bold">
+                                                Lv.{record.newInterval}
+                                            </span>
+                                        </div>
+                                        <div className={cn(
+                                            "w-12 text-right font-bold",
+                                            isLoss ? "text-red-500" : (isGain ? "text-green-500" : "text-muted-foreground")
+                                        )}>
+                                            {isLoss ? '↓' : (isGain ? '↑' : '=')}
+                                            {Math.abs(delta)}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="flex gap-4 flex-wrap justify-center mt-10">
+                    <Link to="/courses" className="px-8 py-3 rounded-full border border-border hover:bg-secondary transition-colors font-medium">
+                        Return
                     </Link>
-                    <button onClick={() => window.location.reload()} className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-sm font-medium">
-                        Review again
+                    <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 font-medium">
+                        Again
                     </button>
                 </div>
             </div>
@@ -174,43 +281,39 @@ export default function StudySession() {
     }
 
     const currentItem = queue[0];
-    // Safety check
     if (!currentItem) return null;
 
     const displayCurrent = getDisplayContent(currentItem);
 
     return (
         <div className="pb-20">
+            {/* Top Bar - Challenge Variant */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6">
-                {/* Top Bar */}
                 <div className="flex items-center justify-between py-4 mb-6 border-b">
-                    <Link to="/courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Link to="/courses" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">Back</span>
+                        <span className="hidden sm:inline">Escape</span>
                     </Link>
 
-                    <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
-                            {/* Dynamic Queue Counter */}
-                            <span className="font-medium text-foreground">{initialCount - queue.length + 1}</span>
-                            <span className="text-muted-foreground">/</span>
-                            <span className="text-muted-foreground">{initialCount}</span>
-                            {queue.length > initialCount - completedCount && (
-                                <span className="ml-1 text-xs text-orange-500 font-bold" title="Retry items added">
-                                    (+{queue.length - (initialCount - completedCount)})
-                                </span>
-                            )}
+                    {isChallenge && (
+                        <div className="flex items-center gap-2 text-red-500 font-bold animate-pulse">
+                            <Swords className="h-4 w-4" />
+                            <span className="text-xs uppercase tracking-widest">Random Challenge</span>
                         </div>
+                    )}
+
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 font-mono text-sm">
+                        {initialCount - queue.length + 1} / {initialCount}
+                        {queue.length > initialCount - completedCount && (
+                            <span className="ml-1 text-xs text-orange-500 font-bold">(+{queue.length - (initialCount - completedCount)})</span>
+                        )}
                     </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="mb-8">
-                    {/* Show visual progress based on completed vs initial, capping at 100% just in case of logic drift, though queue logic implies remaining items */}
-                    <StudyProgress current={completedCount} total={initialCount} />
+                    <StudyProgress current={completedCount} total={initialCount} isChallenge={isChallenge} />
                 </div>
 
-                {/* Main Content - Always Flashcard */}
                 <FlashcardMode
                     displayContent={displayCurrent}
                     additionalData={displayCurrent.additionalData || currentItem.additionalData}
@@ -220,11 +323,6 @@ export default function StudySession() {
                     feedback={feedback}
                     showFurigana={true}
                 />
-
-                {/* Debug Info (Optional - remove in prod if desired, keeping for user clarity on 'shuffle') */}
-                <div className="text-center mt-4 opacity-30 text-xs">
-                    SRS Level: {currentItem.userSrsInterval || 0} • Queue: {queue.length}
-                </div>
             </div>
         </div>
     );
