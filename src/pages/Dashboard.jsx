@@ -64,7 +64,7 @@ export default function Dashboard() {
                             <Link to="/courses">Resume studies</Link>
                         </Button>
                         <Button asChild variant="outline" className="rounded-full px-6 h-12 border-red-500/20 text-red-600 hover:bg-red-500/5 hover:text-red-700">
-                            <Link to="/courses/challenge/study" className="flex items-center gap-2">
+                            <Link to="/study/challenge" className="flex items-center gap-2">
                                 <Zap className="h-4 w-4 fill-current" /> Challenge
                             </Link>
                         </Button>
