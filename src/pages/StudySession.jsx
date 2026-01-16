@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,29 +14,51 @@ export default function StudySession() {
     const { recordProgress } = useProgress();
 
     // Core state
-    const [items, setItems] = useState([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [queue, setQueue] = useState([]);
+    const [initialCount, setInitialCount] = useState(0);
+    const [completedCount, setCompletedCount] = useState(0);
+
+    // UI state
     const [isFlipped, setIsFlipped] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
     const [feedback, setFeedback] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     // Fetch items on mount
     useEffect(() => {
         const fetchUrl = `/topics/${topicId}/items`;
+        setLoading(true);
 
         api.get(fetchUrl)
-            .then(res => setItems(res.data.length > 0 ? res.data : []))
+            .then(res => {
+                let items = res.data.length > 0 ? res.data : [];
+
+                // --- ALGORITHM: SRS Weighted Shuffle ---
+                // 1. Sort by SRS Level (ascending - lower/harder first)
+                // 2. Add random jitter so it's not strictly deterministic
+                items.sort((a, b) => {
+                    const levelA = a.userSrsInterval || 0;
+                    const levelB = b.userSrsInterval || 0;
+                    if (levelA === levelB) return Math.random() - 0.5; // Pure shuffle for same level
+                    return levelA - levelB; // Harder (lower level) first
+                });
+
+                setQueue(items);
+                setInitialCount(items.length);
+                setLoading(false);
+            })
             .catch(err => {
                 console.error("Fetch error:", err);
-                setItems([]);
+                setQueue([]);
+                setLoading(false);
             });
     }, [topicId]);
 
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (isFinished || feedback) return;
+            if (isFinished || feedback || loading || queue.length === 0) return;
 
             if ((e.code === 'Space' || e.code === 'Enter') && !isFlipped) {
                 e.preventDefault();
@@ -50,13 +72,17 @@ export default function StudySession() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFinished, isFlipped, feedback]);
+    }, [isFinished, isFlipped, feedback, loading, queue]);
 
     const handleNext = async (correct) => {
         setFeedback(correct ? 'correct' : 'incorrect');
 
+        const currentItem = queue[0];
+
         // Record progress to backend (non-blocking)
-        const currentItem = items[currentIndex];
+        // We only record the FIRST attempt result for valid spaced repetition stats
+        // If it's a retry (not implemented yet to track "isRetry"), we still send it, backend handles logic.
+        // Ideally we track 'hasBeenAttempted' to avoid double-penalizing or double-rewarding in one session.
         if (currentItem?.id) {
             recordProgress(currentItem.id, correct).catch(err => {
                 console.warn('Failed to record progress:', err);
@@ -65,23 +91,47 @@ export default function StudySession() {
 
         setTimeout(() => {
             setFeedback(null);
+            setIsFlipped(false);
 
             setStats(prev => ({
                 correct: correct ? prev.correct + 1 : prev.correct,
                 incorrect: !correct ? prev.incorrect + 1 : prev.incorrect
             }));
 
-            if (currentIndex < items.length - 1) {
-                setIsFlipped(false);
-                setCurrentIndex(prev => prev + 1);
+            // --- ALGORITHM: Retry Logic ---
+            const nextQueue = [...queue];
+            const processedItem = nextQueue.shift(); // Remove current
+
+            if (correct) {
+                // Determine if done
+                setCompletedCount(prev => prev + 1);
             } else {
+                // Incorrect: Re-queue
+                // Insert back into queue, but not immediately (delayed by min(5, len))
+                // This SRS style ensures you see it again before session end.
+                const insertIndex = Math.min(nextQueue.length, 3 + Math.floor(Math.random() * 3));
+                nextQueue.splice(insertIndex, 0, processedItem);
+            }
+
+            setQueue(nextQueue);
+
+            if (nextQueue.length === 0) {
                 setIsFinished(true);
             }
-        }, 500);
+        }, 500); // Animation delay
     };
 
     // Loading / Empty
-    if (items.length === 0) {
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
+                <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3" />
+                Prepare your mind...
+            </div>
+        );
+    }
+
+    if (initialCount === 0 && !loading) {
         if (topicId === 'review') {
             return (
                 <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
@@ -95,9 +145,9 @@ export default function StudySession() {
             );
         }
         return (
-            <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
-                <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3" />
-                Loading...
+            <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
+                <div className="text-muted-foreground">This course / topic has no words yet.</div>
+                <Link to="/management" className="text-primary hover:underline">Add words in Management</Link>
             </div>
         );
     }
@@ -106,7 +156,11 @@ export default function StudySession() {
     if (isFinished) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
-                <StudyStats correct={stats.correct} incorrect={stats.incorrect} total={items.length} />
+                <StudyStats correct={stats.correct} incorrect={stats.incorrect} total={initialCount} />
+                <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold">Session Complete!</h2>
+                    <p className="text-muted-foreground">You've cleared the queue.</p>
+                </div>
                 <div className="flex gap-4 flex-wrap justify-center">
                     <Link to="/courses" className="px-6 py-2.5 rounded-full border border-border hover:bg-secondary transition-colors text-sm font-medium">
                         Explore courses
@@ -119,7 +173,10 @@ export default function StudySession() {
         );
     }
 
-    const currentItem = items[currentIndex];
+    const currentItem = queue[0];
+    // Safety check
+    if (!currentItem) return null;
+
     const displayCurrent = getDisplayContent(currentItem);
 
     return (
@@ -134,16 +191,23 @@ export default function StudySession() {
 
                     <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50">
-                            <span className="font-medium text-foreground">{currentIndex + 1}</span>
+                            {/* Dynamic Queue Counter */}
+                            <span className="font-medium text-foreground">{initialCount - queue.length + 1}</span>
                             <span className="text-muted-foreground">/</span>
-                            <span className="text-muted-foreground">{items.length}</span>
+                            <span className="text-muted-foreground">{initialCount}</span>
+                            {queue.length > initialCount - completedCount && (
+                                <span className="ml-1 text-xs text-orange-500 font-bold" title="Retry items added">
+                                    (+{queue.length - (initialCount - completedCount)})
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="mb-8">
-                    <StudyProgress current={currentIndex} total={items.length} />
+                    {/* Show visual progress based on completed vs initial, capping at 100% just in case of logic drift, though queue logic implies remaining items */}
+                    <StudyProgress current={completedCount} total={initialCount} />
                 </div>
 
                 {/* Main Content - Always Flashcard */}
@@ -156,6 +220,11 @@ export default function StudySession() {
                     feedback={feedback}
                     showFurigana={true}
                 />
+
+                {/* Debug Info (Optional - remove in prod if desired, keeping for user clarity on 'shuffle') */}
+                <div className="text-center mt-4 opacity-30 text-xs">
+                    SRS Level: {currentItem.userSrsInterval || 0} • Queue: {queue.length}
+                </div>
             </div>
         </div>
     );
