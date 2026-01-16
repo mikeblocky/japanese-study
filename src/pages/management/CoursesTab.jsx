@@ -27,10 +27,7 @@ const CATEGORY_OPTIONS = [
     { value: 'Mixed', label: 'Mixed' },
 ];
 
-const VISIBILITY_OPTIONS = [
-    { value: 'PRIVATE', label: '🔒 Private' },
-    { value: 'PUBLIC', label: '🌍 Public' },
-];
+
 
 export default function CoursesTab() {
     const [showForm, setShowForm] = useState(false);
@@ -43,7 +40,7 @@ export default function CoursesTab() {
         description: '',
         minLevel: '',
         maxLevel: '',
-        visibility: 'PRIVATE',
+
         tags: '',
         category: '',
         difficulty: 3,
@@ -60,7 +57,7 @@ export default function CoursesTab() {
             description: '',
             minLevel: '',
             maxLevel: '',
-            visibility: 'PRIVATE',
+
             tags: '',
             category: '',
             difficulty: 3,
@@ -95,7 +92,7 @@ export default function CoursesTab() {
             description: course.description || '',
             minLevel: course.minLevel || '',
             maxLevel: course.maxLevel || '',
-            visibility: course.visibility || 'PRIVATE',
+
             tags: course.tags || '',
             category: course.category || '',
             difficulty: course.difficulty || 3,
@@ -122,7 +119,7 @@ export default function CoursesTab() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Course Management"
+                title="Course management"
                 action={
                     <Button onClick={() => setShowForm(true)} className="gap-2 w-full sm:w-auto">
                         <Plus className="h-4 w-4" /> Add course
@@ -170,24 +167,15 @@ export default function CoursesTab() {
                         </FormField>
                     </div>
 
-                    {/* Visibility & Category */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField label="Visibility" id="course-visibility">
-                            <Select
-                                value={values.visibility}
-                                onChange={(v) => handleChange('visibility', v)}
-                                options={VISIBILITY_OPTIONS}
-                            />
-                        </FormField>
-                        <FormField label="Category" id="course-category">
-                            <Select
-                                value={values.category}
-                                onChange={(v) => handleChange('category', v)}
-                                options={CATEGORY_OPTIONS}
-                                placeholder="Select category"
-                            />
-                        </FormField>
-                    </div>
+                    <FormField label="Category" id="course-category">
+                        <Select
+                            value={values.category}
+                            onChange={(v) => handleChange('category', v)}
+                            options={CATEGORY_OPTIONS}
+                            placeholder="Select category"
+                        />
+                    </FormField>
+
 
                     {/* Difficulty & Time */}
                     <div className="grid grid-cols-2 gap-4">
@@ -226,7 +214,8 @@ export default function CoursesTab() {
                         />
                     </FormField>
                 </FormCard>
-            )}
+            )
+            }
 
             {/* Technical Table View */}
             <div className="border rounded-md overflow-hidden bg-card">
@@ -239,7 +228,7 @@ export default function CoursesTab() {
                                 <th className="px-4 py-3 w-[100px]">Level</th>
                                 <th className="px-4 py-3 w-[100px]">Category</th>
                                 <th className="px-4 py-3 w-[80px]">Diff</th>
-                                <th className="px-4 py-3 w-[80px]">Vis</th>
+
                                 <th className="px-4 py-3 w-[100px] text-right">Actions</th>
                             </tr>
                         </thead>
@@ -270,9 +259,7 @@ export default function CoursesTab() {
                                             <span className="font-mono text-xs">{course.difficulty}/5</span>
                                         ) : '-'}
                                     </td>
-                                    <td className="px-4 py-2 text-center text-xs">
-                                        {course.visibility === 'PUBLIC' ? '🌍' : '🔒'}
-                                    </td>
+
                                     <td className="px-4 py-2 text-right">
                                         <ActionButtons
                                             onEdit={() => handleEdit(course)}
@@ -287,16 +274,18 @@ export default function CoursesTab() {
                 </div>
             </div>
 
-            {courses.length === 0 && !loading && (
-                <EmptyState
-                    icon={BookOpen}
-                    title="No courses yet"
-                    description="Create your first course to get started"
-                    actionLabel="Add course"
-                    onAction={() => setShowForm(true)}
-                />
-            )}
-        </div>
+            {
+                courses.length === 0 && !loading && (
+                    <EmptyState
+                        icon={BookOpen}
+                        title="No courses yet"
+                        description="Create your first course to get started"
+                        actionLabel="Add course"
+                        onAction={() => setShowForm(true)}
+                    />
+                )
+            }
+        </div >
     );
 }
 

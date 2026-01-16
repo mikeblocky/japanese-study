@@ -137,181 +137,158 @@ export default function ImportTab() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <div>
-                <h2 className="text-xl font-semibold">Import from Anki</h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                    Import your Anki decks (.apkg files) to quickly populate courses and lessons
+                <h2 className="text-2xl font-bold tracking-tight">Import Content</h2>
+                <p className="text-muted-foreground mt-1">
+                    Upload your Anki decks (.apkg) to automatically create courses, lessons, and vocabulary.
                 </p>
             </div>
 
-            <Card className="border-primary">
-                <CardHeader>
-                    <CardTitle>Upload Anki Deck</CardTitle>
-                    <CardDescription>
-                        Select an .apkg file exported from Anki Desktop
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <label htmlFor="anki-file" className="block text-sm font-medium">
-                            Deck File (.apkg) *
-                        </label>
-                        <input
-                            id="anki-file"
-                            type="file"
-                            accept=".apkg"
-                            onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
-                            disabled={importing}
-                            className="block w-full text-sm text-muted-foreground
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-md file:border-0
-                                file:text-sm file:font-medium
-                                file:bg-primary file:text-primary-foreground
-                                hover:file:bg-primary/90
-                                file:cursor-pointer cursor-pointer
-                                disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        {ankiFile && (
-                            <p className="text-xs text-muted-foreground">
-                                Selected: {ankiFile.name} ({(ankiFile.size / 1024 / 1024).toFixed(2)} MB)
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Visibility Selector */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium">
-                            Visibility
-                        </label>
-                        <div className="flex gap-3">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="visibility"
-                                    value="PRIVATE"
-                                    checked={visibility === 'PRIVATE'}
-                                    onChange={(e) => setVisibility(e.target.value)}
-                                    className="h-4 w-4 text-primary"
-                                />
-                                <span className="text-sm">🔒 Private (only you)</span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="visibility"
-                                    value="PUBLIC"
-                                    checked={visibility === 'PUBLIC'}
-                                    onChange={(e) => setVisibility(e.target.value)}
-                                    className="h-4 w-4 text-primary"
-                                />
-                                <span className="text-sm">🌍 Public (visible to all)</span>
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Upload className="h-5 w-5" />
+                            Upload Deck
+                        </CardTitle>
+                        <CardDescription>
+                            Select an .apkg file (Max 50MB)
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-col items-center justify-center p-6 bg-muted/10 rounded-lg border border-muted/20">
+                            <input
+                                id="anki-file"
+                                type="file"
+                                accept=".apkg"
+                                onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
+                                disabled={importing}
+                                className="hidden"
+                            />
+                            <label
+                                htmlFor="anki-file"
+                                className={`flex flex-col items-center gap-2 cursor-pointer text-center ${importing ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                                    <FileText className="h-6 w-6 text-primary" />
+                                </div>
+                                {ankiFile ? (
+                                    <div className="space-y-1">
+                                        <p className="font-medium text-foreground">{ankiFile.name}</p>
+                                        <p className="text-xs text-muted-foreground">{(ankiFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        <p className="font-medium text-foreground">Click to browse</p>
+                                        <p className="text-xs text-muted-foreground">or drag and drop here</p>
+                                    </div>
+                                )}
                             </label>
                         </div>
-                    </div>
 
-                    {progress && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                            {progress}
-                        </div>
-                    )}
-
-                    <Button
-                        onClick={handleImport}
-                        disabled={!ankiFile || importing}
-                        className="w-full"
-                    >
-                        {importing ? (
-                            <>
-                                <div className="mr-2 h-4 w-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                                Importing...
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="mr-2 h-4 w-4" />
-                                Import Deck
-                            </>
+                        {progress && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Processing...</span>
+                                    <span>{progress.includes('%') ? progress.split('... ')[1] : ''}</span>
+                                </div>
+                                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary animate-pulse"
+                                        style={{ width: '100%' }} // Indeterminate for now unless backend sends exact %
+                                    />
+                                </div>
+                                <p className="text-xs text-center text-muted-foreground animate-pulse">{progress}</p>
+                            </div>
                         )}
-                    </Button>
-                </CardContent>
-            </Card>
+
+                        <Button
+                            onClick={handleImport}
+                            disabled={!ankiFile || importing}
+                            className="w-full"
+                            size="lg"
+                        >
+                            {importing ? 'Importing...' : 'Start Import'}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-secondary/20 border-none">
+                    <CardHeader>
+                        <div className="flex items-center gap-2 text-primary">
+                            <Info className="h-5 w-5" />
+                            <CardTitle className="text-lg">Export Guide</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                        <div className="space-y-2">
+                            <h4 className="font-medium text-foreground">Prepare your deck in Anki:</h4>
+                            <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground ml-1">
+                                <li>Open <strong>Anki Desktop</strong></li>
+                                <li>Click the gear icon next to your deck</li>
+                                <li>Select <strong>Export</strong></li>
+                                <li>Format: <strong>Anki Deck Package (*.apkg)</strong></li>
+                                <li>Uncheck <em>"Include scheduling information"</em></li>
+                                <li>Check <em>"Include media"</em> (images/audio supported)</li>
+                                <li>Click <strong>Export</strong> to save the file</li>
+                            </ol>
+                        </div>
+                        <div className="p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
+                            <strong>Note:</strong> Large decks with lots of media may take a few minutes to process. Please be patient.
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {result && (
-                <Card className={result.success ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}>
+                <Card className={`border ${result.success ? 'border-green-500/20 bg-green-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
                     <CardHeader>
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-center gap-3">
                             {result.success ? (
-                                <CheckCircle className="h-6 w-6 text-green-500 shrink-0 mt-0.5" />
+                                <CheckCircle className="h-6 w-6 text-green-500" />
                             ) : (
-                                <AlertCircle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+                                <AlertCircle className="h-6 w-6 text-red-500" />
                             )}
-                            <div className="flex-1">
-                                <CardTitle className={result.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
-                                    {result.success ? 'Import Successful' : 'Import Failed'}
+                            <div>
+                                <CardTitle className={result.success ? 'text-green-600' : 'text-red-600'}>
+                                    {result.success ? 'Import Complete' : 'Import Failed'}
                                 </CardTitle>
-                                <CardDescription className="mt-1 whitespace-pre-wrap">
-                                    {result.message}
+                                <CardDescription className="font-mono text-xs mt-1">
+                                    {result.technicalDetails}
                                 </CardDescription>
                             </div>
                         </div>
                     </CardHeader>
+
                     {result.success && result.details && (
                         <CardContent>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <div className="flex flex-col items-center p-3 rounded-lg bg-background">
-                                    <p className="text-2xl font-bold text-blue-500">{result.details.courses}</p>
-                                    <p className="text-xs text-muted-foreground">Courses</p>
-                                </div>
-                                <div className="flex flex-col items-center p-3 rounded-lg bg-background">
-                                    <p className="text-2xl font-bold text-purple-500">{result.details.lessons}</p>
-                                    <p className="text-xs text-muted-foreground">Lessons</p>
-                                </div>
-                                <div className="flex flex-col items-center p-3 rounded-lg bg-background">
-                                    <p className="text-2xl font-bold text-green-500">{result.details.words}</p>
-                                    <p className="text-xs text-muted-foreground">Words</p>
-                                </div>
-                                <div className="flex flex-col items-center p-3 rounded-lg bg-background">
-                                    <p className="text-2xl font-bold text-orange-500">{result.details.skipped}</p>
-                                    <p className="text-xs text-muted-foreground">Skipped</p>
-                                </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <StatBox label="Courses" value={result.details.courses} color="text-blue-500" />
+                                <StatBox label="Lessons" value={result.details.lessons} color="text-purple-500" />
+                                <StatBox label="Words" value={result.details.words} color="text-emerald-500" />
+                                <StatBox label="Skipped" value={result.details.skipped} color="text-orange-500" />
                             </div>
+                            <p className="mt-4 text-sm text-center text-muted-foreground">{result.message}</p>
                         </CardContent>
                     )}
-                    {!result.success && result.technicalDetails && (
+
+                    {!result.success && (
                         <CardContent>
-                            <details className="text-xs">
-                                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                                    Technical details
-                                </summary>
-                                <pre className="mt-2 p-2 rounded bg-background text-xs overflow-x-auto">
-                                    {result.technicalDetails}
-                                </pre>
-                            </details>
+                            <p className="text-sm text-red-600/90 dark:text-red-400/90">{result.message}</p>
                         </CardContent>
                     )}
                 </Card>
             )}
+        </div>
+    );
+}
 
-            <Card className="bg-blue-500/5 border-blue-500/20">
-                <CardHeader>
-                    <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                        <div>
-                            <CardTitle className="text-base">How to export from Anki</CardTitle>
-                            <div className="mt-1.5 space-y-1 text-sm text-muted-foreground">
-                                <div>1. Open Anki Desktop</div>
-                                <div>2. Select the deck you want to export</div>
-                                <div>3. Click <strong>File → Export</strong></div>
-                                <div>4. Export format: <strong>Anki Deck Package (*.apkg)</strong></div>
-                                <div>5. Uncheck "Include scheduling information"</div>
-                                <div>6. Click <strong>Export</strong> and select a location</div>
-                                <div>7. Upload the .apkg file here</div>
-                            </div>
-                        </div>
-                    </div>
-                </CardHeader>
-            </Card>
+function StatBox({ label, value, color }) {
+    return (
+        <div className="bg-background border rounded-lg p-3 text-center shadow-sm">
+            <div className={`text-2xl font-bold ${color}`}>{value}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{label}</div>
         </div>
     );
 }

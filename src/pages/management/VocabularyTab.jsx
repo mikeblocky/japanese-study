@@ -97,7 +97,7 @@ export default function VocabularyTab() {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Vocabulary Management</h2>
+            <h2 className="text-xl font-semibold">Vocabulary management</h2>
 
             {/* Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -175,6 +175,7 @@ export default function VocabularyTab() {
                                 <tr>
                                     <th className="px-4 py-3">Front</th>
                                     <th className="px-4 py-3">Back</th>
+                                    <th className="px-4 py-3 w-[100px] text-center">SRS Level</th>
                                     <th className="px-4 py-3 w-[100px] text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -190,6 +191,15 @@ export default function VocabularyTab() {
                                         <tr key={item.id} className="hover:bg-secondary/20">
                                             <td className="px-4 py-2 font-medium">{item.primaryText}</td>
                                             <td className="px-4 py-2 text-muted-foreground">{item.secondaryText}</td>
+                                            <td className="px-4 py-2 text-center text-xs">
+                                                {item.userSrsInterval ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-500/10 text-blue-500 font-mono">
+                                                        Lv.{item.userSrsInterval}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-2 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(item)}>
