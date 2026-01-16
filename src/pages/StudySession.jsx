@@ -45,6 +45,7 @@ export default function StudySession() {
                         id: p.studyItemId,
                         primaryText: p.primaryText,
                         secondaryText: p.secondaryText,
+                        meaning: p.meaning,
                         userSrsInterval: p.interval, // Current interval
                         // ... other fields if needed for display
                         additionalData: {} // safety
