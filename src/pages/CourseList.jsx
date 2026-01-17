@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen } from 'lucide-react';
 import api from '@/lib/api';
 import { useCourses } from '@/hooks/useCourses';
 import { PageShell, PageHeader } from '@/components/ui/page';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function CourseList() {
@@ -42,8 +42,7 @@ export default function CourseList() {
         return () => { cancelled = true; };
     }, [baseCourses]);
 
-    // Dynamic gradient generation for personality
-    // Dynamic gradient generation for personality
+    // Dynamic border color for personality
     const getGradient = (index) => {
         // Now just border colors for distinct, flat look
         const colors = [
@@ -86,14 +85,25 @@ export default function CourseList() {
                         <Card className={`h-full transition-all duration-300 hover:scale-[1.01] hover:shadow-md border-l-4 ${getGradient(i)} bg-card`}>
                             <CardHeader className="relative overflow-hidden">
                                 <div className="flex items-center gap-2 flex-wrap mb-4">
-                                    <Badge variant="secondary" className="bg-secondary/50 border-none">
-                                        JLPT {course.level || (i === 0 ? 'N5' : 'N4')}
-                                    </Badge>
+                                    {/* Level Badge */}
+                                    {(course.minLevel || course.maxLevel || course.level) && (
+                                        <Badge variant="secondary" className="bg-secondary/50 border-none">
+                                            {course.minLevel && course.maxLevel
+                                                ? `${course.minLevel} - ${course.maxLevel}`
+                                                : course.minLevel || course.maxLevel || course.level}
+                                        </Badge>
+                                    )}
+                                    {/* Category Badge */}
+                                    {course.category && (
+                                        <Badge variant="outline" className="bg-transparent border-primary/20 text-muted-foreground">
+                                            {course.category}
+                                        </Badge>
+                                    )}
+                                    {/* Topics Count */}
                                     <Badge variant="outline" className="bg-transparent border-primary/10 text-muted-foreground">
                                         <BookOpen className="h-3 w-3 mr-1" />
                                         {course.topics?.length || 0} Topics
                                     </Badge>
-                                    {/* Visibility/Owner Badge */}
                                     {course.visibility === 'PUBLIC' && course.ownerUsername && (
                                         <Badge variant="outline" className="bg-transparent border-blue-400/30 text-blue-600 text-xs">
                                             🌍 by {course.ownerUsername}

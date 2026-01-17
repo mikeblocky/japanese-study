@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Check, Book } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, Book } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useTopics } from '@/hooks/useTopics';
 import { useItems } from '@/hooks/useItems';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

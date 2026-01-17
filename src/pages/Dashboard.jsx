@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    BookOpen, ChevronRight, Lightbulb, Trophy, Target, Zap, ArrowRight, Sparkles
+    BookOpen, ChevronRight, Lightbulb, Zap, ArrowRight, Sparkles
 } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useProgress } from '@/hooks/useProgress';
