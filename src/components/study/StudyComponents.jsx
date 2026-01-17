@@ -25,7 +25,12 @@ export function isJapanese(text) {
 }
 
 export function getDisplayContent(item) {
-    const data = item.additionalData || {};
+    // For manual items (no additionalData), populate it so FlashcardMode has something to show on the back
+    if (Object.keys(data).length === 0) {
+        if (item.secondaryText) data['Reading'] = item.secondaryText;
+        if (item.meaning) data['Meaning'] = item.meaning;
+    }
+
     let term = data['Expression'] || data['Kanji'] || data['Front'] || item.primaryText || '-';
     let english = data['Meaning'] || data['English'] || data['Back'] || item.meaning || '';
     let reading = data['Reading'] || data['Kana'] || data['Furigana'] || item.secondaryText || '';
