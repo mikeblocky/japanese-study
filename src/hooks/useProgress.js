@@ -61,20 +61,6 @@ export function useProgress() {
         }
     }, []);
 
-
-    const getDueForReview = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/progress/due');
-            return response.data;
-        } catch (err) {
-            console.error('Failed to fetch due items:', err);
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     /**
      * Get mastery level indicator (0-5 scale).
      */
@@ -110,7 +96,6 @@ export function useProgress() {
         recordProgress,
         getTopicProgress,
         getStats,
-        getDueForReview,
         getMasteryColor,
         getMasteryLabel
     };
