@@ -225,10 +225,11 @@ export default function CoursesTab() {
                             <tr>
                                 <th className="px-4 py-3 w-[60px]">ID</th>
                                 <th className="px-4 py-3">Course</th>
+                                <th className="px-4 py-3 w-[200px]">Description</th>
                                 <th className="px-4 py-3 w-[100px]">Level</th>
                                 <th className="px-4 py-3 w-[100px]">Category</th>
-                                <th className="px-4 py-3 w-[80px]">Diff</th>
-
+                                <th className="px-4 py-3 w-[60px]">Diff</th>
+                                <th className="px-4 py-3 w-[60px]">Hours</th>
                                 <th className="px-4 py-3 w-[100px] text-right">Actions</th>
                             </tr>
                         </thead>
@@ -248,6 +249,9 @@ export default function CoursesTab() {
                                             </div>
                                         )}
                                     </td>
+                                    <td className="px-4 py-2 text-xs text-muted-foreground max-w-[200px] truncate" title={course.description}>
+                                        {course.description || '-'}
+                                    </td>
                                     <td className="px-4 py-2 text-xs">
                                         {course.minLevel && course.maxLevel
                                             ? `${course.minLevel} - ${course.maxLevel}`
@@ -261,7 +265,9 @@ export default function CoursesTab() {
                                             <span className="font-mono text-xs">{course.difficulty}/5</span>
                                         ) : '-'}
                                     </td>
-
+                                    <td className="px-4 py-2 text-center text-xs text-muted-foreground">
+                                        {course.estimatedHours ? `${course.estimatedHours}h` : '-'}
+                                    </td>
                                     <td className="px-4 py-2 text-right">
                                         <ActionButtons
                                             onEdit={() => handleEdit(course)}

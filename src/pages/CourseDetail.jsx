@@ -72,13 +72,13 @@ export default function CourseDetail() {
             </div>
 
             <div className="grid gap-6">
-                <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center justify-between px-2 mb-4">
-                        <h3 className="text-2xl font-serif text-foreground flex items-center gap-3">
-                            Curriculum
-                            <span className="text-muted-foreground text-lg font-normal italic font-sans">({topics.length} chapters)</span>
-                        </h3>
-                    </div>
+                <div className="flex items-center gap-3 px-2 mb-4">
+                    <h3 className="text-2xl font-serif text-foreground">
+                        Curriculum
+                    </h3>
+                    <span className="text-muted-foreground text-lg font-normal italic">
+                        ({topics.length} chapters)
+                    </span>
                 </div>
 
                 <div className="grid gap-3">
