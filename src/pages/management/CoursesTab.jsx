@@ -249,7 +249,9 @@ export default function CoursesTab() {
                                         )}
                                     </td>
                                     <td className="px-4 py-2 text-xs">
-                                        {course.levelDisplay || course.level || '-'}
+                                        {course.minLevel && course.maxLevel
+                                            ? `${course.minLevel} - ${course.maxLevel}`
+                                            : course.minLevel || course.maxLevel || course.level || '-'}
                                     </td>
                                     <td className="px-4 py-2 text-xs text-muted-foreground">
                                         {course.category || '-'}
