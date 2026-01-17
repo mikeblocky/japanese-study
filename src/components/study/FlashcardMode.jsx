@@ -8,9 +8,10 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
 
     const formatContent = (text) => {
         if (!text) return [];
-        // Split by em-dash followed by Japanese character, or by existing newlines
+        // Split by newlines, standard separators, or by detecting the start of a new Japanese term (Kanji/Kana followed by colon)
+        // Pattern: Lookahead for [JapaneseChars](optional parens):
         return String(text)
-            .split(/(?=一|二|三|四|五|六|七|八|九|十)|—(?=[^\s])|\n/)
+            .split(/(?=[^\x00-\x7F]+(?:[（(][^)）]+[)）])?[:：])|\n|—(?=[^\s])/)
             .map(s => s.trim())
             .filter(s => s.length > 0);
     };
