@@ -8,10 +8,8 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
 
     const formatContent = (text) => {
         if (!text) return [];
-        // Split by newlines, standard separators, or by detecting the start of a new Japanese term (Kanji/Kana followed by colon)
-        // Pattern: Lookahead for [JapaneseChars](optional parens):
         return String(text)
-            .split(/(?=[^\x00-\x7F]+(?:[（(][^)）]+[)）])?[:：])|\n|—(?=[^\s])/)
+            .split(/(?<![^\x00-\x7F])(?=[^\x00-\x7F]+(?:[（(][^)）]+[)）])?[:：])|\n|—(?=[^\s])/)
             .map(s => s.trim())
             .filter(s => s.length > 0);
     };
