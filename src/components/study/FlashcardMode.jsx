@@ -2,11 +2,19 @@ import { cn } from '@/lib/utils';
 import { Check, X } from 'lucide-react';
 
 export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback }) {
-    // Filter out Reading/Meaning since we show them explicitly
-    const allFields = Object.entries(additionalData || {}).filter(([key, value]) =>
-        value && String(value).trim() !== '' &&
-        !['Reading', 'Meaning', 'Kana', 'Furigana', 'English', 'Back'].includes(key)
-    );
+    // Collect values already shown (reading and meaning)
+    const shownValues = new Set();
+    if (displayContent.reading) shownValues.add(displayContent.reading.trim().toLowerCase());
+    if (displayContent.english) shownValues.add(displayContent.english.trim().toLowerCase());
+    if (displayContent.term) shownValues.add(displayContent.term.trim().toLowerCase());
+
+    // Filter out fields that have values already displayed
+    const allFields = Object.entries(additionalData || {}).filter(([key, value]) => {
+        if (!value || String(value).trim() === '') return false;
+        const normalizedValue = String(value).trim().toLowerCase();
+        // Skip if this value is already shown
+        return !shownValues.has(normalizedValue);
+    });
 
     const formatContent = (text) => {
         if (!text) return [];
@@ -34,21 +42,21 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {/* Show Reading first if available */}
+                        {/* Show Reading first if available and different from term */}
                         {displayContent.reading && displayContent.reading !== displayContent.term && (
                             <div className="border-b border-border/50 pb-4">
                                 <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Reading</div>
                                 <div className="text-base leading-relaxed">{displayContent.reading}</div>
                             </div>
                         )}
-                        {/* Show Meaning (called 'english' in displayContent) */}
+                        {/* Show Meaning */}
                         {displayContent.english && (
                             <div className="border-b border-border/50 pb-4">
                                 <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
                                 <div className="text-base leading-relaxed">{displayContent.english}</div>
                             </div>
                         )}
-                        {/* Show additional fields */}
+                        {/* Show additional fields (non-duplicate values only) */}
                         {allFields.map(([key, value]) => {
                             const lines = formatContent(value);
                             return (
