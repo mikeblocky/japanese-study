@@ -32,6 +32,21 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                     </div>
                 ) : (
                     <div className="space-y-4">
+                        {/* Show Reading first if available */}
+                        {displayContent.reading && displayContent.reading !== displayContent.term && (
+                            <div className="border-b border-border/50 pb-4">
+                                <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Reading</div>
+                                <div className="text-base leading-relaxed">{displayContent.reading}</div>
+                            </div>
+                        )}
+                        {/* Show Meaning (called 'english' in displayContent) */}
+                        {displayContent.english && (
+                            <div className="border-b border-border/50 pb-4">
+                                <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
+                                <div className="text-base leading-relaxed">{displayContent.english}</div>
+                            </div>
+                        )}
+                        {/* Show additional fields */}
                         {allFields.map(([key, value]) => {
                             const lines = formatContent(value);
                             return (
@@ -45,7 +60,7 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 </div>
                             );
                         })}
-                        {allFields.length === 0 && (
+                        {allFields.length === 0 && !displayContent.reading && !displayContent.english && (
                             <div className="text-center py-4 text-muted-foreground">No data</div>
                         )}
                     </div>
