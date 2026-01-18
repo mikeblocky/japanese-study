@@ -1,10 +1,98 @@
 import { cn } from '@/lib/utils';
-import { Check, X, Volume2 } from 'lucide-react';
+import { Check, X, Volume2, Play, Image as ImageIcon } from 'lucide-react';
 import { AudioPlayer, MediaImage } from './MediaComponents';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 
+// Mini audio player for inline audio references
+function InlineAudioPlayer({ filename, storedUrl }) {
+    const [playing, setPlaying] = useState(false);
+    const [error, setError] = useState(false);
+    const audioRef = useRef(null);
+
+    // Use storedUrl if available, otherwise try the direct filename path
+    const audioSrc = storedUrl || `/api/media/${filename}`;
+
+    const handlePlay = () => {
+        if (audioRef.current) {
+            if (playing) {
+                audioRef.current.pause();
+                setPlaying(false);
+            } else {
+                audioRef.current.play().catch(() => setError(true));
+                setPlaying(true);
+            }
+        }
+    };
+
+    return (
+        <span className="inline-flex items-center gap-1">
+            <button
+                onClick={handlePlay}
+                disabled={error}
+                className={cn(
+                    "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors",
+                    error
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : playing
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground hover:bg-primary/20"
+                )}
+            >
+                {playing ? <Volume2 className="h-3 w-3 animate-pulse" /> : <Play className="h-3 w-3" />}
+                <span className="max-w-32 truncate">{filename}</span>
+            </button>
+            <audio
+                ref={audioRef}
+                src={audioSrc}
+                onEnded={() => setPlaying(false)}
+                onError={() => setError(true)}
+                className="hidden"
+            />
+        </span>
+    );
+}
+
+// Inline image component with error handling
+function InlineImage({ filename, storedUrl }) {
+    const [error, setError] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    // Use storedUrl if available, otherwise try the direct filename path
+    const imageSrc = storedUrl || `/api/media/${filename}`;
+
+    if (error) {
+        return (
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                <ImageIcon className="h-3 w-3" />
+                <span className="max-w-32 truncate">{filename}</span>
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-block my-2">
+            <img
+                src={imageSrc}
+                alt={filename}
+                onError={() => setError(true)}
+                onLoad={() => setLoaded(true)}
+                className={cn(
+                    "max-w-full max-h-48 rounded-lg border border-border object-contain",
+                    !loaded && "hidden"
+                )}
+            />
+            {!loaded && !error && (
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
+                    <ImageIcon className="h-3 w-3 animate-pulse" />
+                    Loading...
+                </span>
+            )}
+        </span>
+    );
+}
 // Component to render text with embedded media (from Anki fields)
-function RichContent({ text }) {
+// mediaUrlMap: { originalFilename: storedUrl } - maps original filenames to stored API URLs
+function RichContent({ text, mediaUrlMap = {} }) {
     if (!text) return null;
 
     // Extract and render media from text
@@ -41,21 +129,14 @@ function RichContent({ text }) {
                 }
             }
 
-            // Add the media element
+            // Add the media element with stored URL if available
             const filename = earliestMatch[1];
+            const storedUrl = mediaUrlMap[filename];
+
             if (matchedPattern.type === 'audio') {
-                parts.push(
-                    <span key={key++} className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                        <Volume2 className="h-3 w-3" />
-                        {filename}
-                    </span>
-                );
+                parts.push(<InlineAudioPlayer key={key++} filename={filename} storedUrl={storedUrl} />);
             } else if (matchedPattern.type === 'image') {
-                parts.push(
-                    <span key={key++} className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
-                        🖼️ {filename}
-                    </span>
-                );
+                parts.push(<InlineImage key={key++} filename={filename} storedUrl={storedUrl} />);
             }
 
             remaining = remaining.slice(earliestIndex + earliestMatch[0].length);
@@ -99,6 +180,38 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isFlipped, feedback, onFlip, onAnswer]);
+
+    // Build media URL map from stored audio/image URLs
+    // The audioUrl/imageUrl contain stored paths like "/api/media/abc123_filename.mp3"
+    // We need to map "filename.mp3" -> "/api/media/abc123_filename.mp3"
+    const mediaUrlMap = useMemo(() => {
+        const map = {};
+
+        // Parse audioUrl (can be comma-separated)
+        if (audioUrl) {
+            audioUrl.split(',').forEach(url => {
+                const trimmedUrl = url.trim();
+                // Extract original filename from URL: /api/media/prefix_originalname.mp3 -> originalname.mp3
+                const match = trimmedUrl.match(/\/api\/media\/[^_]+_(.+)$/);
+                if (match) {
+                    map[match[1]] = trimmedUrl;
+                }
+            });
+        }
+
+        // Parse imageUrl (can be comma-separated)
+        if (imageUrl) {
+            imageUrl.split(',').forEach(url => {
+                const trimmedUrl = url.trim();
+                const match = trimmedUrl.match(/\/api\/media\/[^_]+_(.+)$/);
+                if (match) {
+                    map[match[1]] = trimmedUrl;
+                }
+            });
+        }
+
+        return map;
+    }, [audioUrl, imageUrl]);
 
     // Collect values already shown (reading and meaning)
     const shownValues = new Set();
@@ -147,14 +260,14 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 {displayContent.reading && displayContent.reading !== displayContent.term && (
                                     <div className="border-b border-border/50 pb-4">
                                         <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Reading</div>
-                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.reading} /></div>
+                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.reading} mediaUrlMap={mediaUrlMap} /></div>
                                     </div>
                                 )}
                                 {/* Show Meaning only if different from Reading */}
                                 {displayContent.english && displayContent.english !== displayContent.reading && (
                                     <div className="border-b border-border/50 pb-4">
                                         <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
-                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.english} /></div>
+                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.english} mediaUrlMap={mediaUrlMap} /></div>
                                     </div>
                                 )}
                                 {/* Show additional fields (non-duplicate values only) */}
@@ -166,7 +279,7 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                             <div className="space-y-2">
                                                 {lines.map((line, i) => (
                                                     <div key={i} className="text-base leading-relaxed">
-                                                        <RichContent text={line} />
+                                                        <RichContent text={line} mediaUrlMap={mediaUrlMap} />
                                                     </div>
                                                 ))}
                                             </div>
