@@ -147,14 +147,14 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 {displayContent.reading && displayContent.reading !== displayContent.term && (
                                     <div className="border-b border-border/50 pb-4">
                                         <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Reading</div>
-                                        <div className="text-base leading-relaxed">{displayContent.reading}</div>
+                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.reading} /></div>
                                     </div>
                                 )}
                                 {/* Show Meaning only if different from Reading */}
                                 {displayContent.english && displayContent.english !== displayContent.reading && (
                                     <div className="border-b border-border/50 pb-4">
                                         <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
-                                        <div className="text-base leading-relaxed">{displayContent.english}</div>
+                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.english} /></div>
                                     </div>
                                 )}
                                 {/* Show additional fields (non-duplicate values only) */}
