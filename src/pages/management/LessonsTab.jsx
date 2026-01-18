@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Check, FolderOpen, List } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useTopics } from '@/hooks/useTopics';
-
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,10 @@ export default function LessonsTab() {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(null);
+    const { user } = useAuth();
+
+    // Check if current user owns the selected course
+    const isOwner = selectedCourse && (selectedCourse.ownerId == null || selectedCourse.ownerId === user?.uid);
 
     // Custom hooks!
     const { courses } = useCourses();
@@ -116,14 +120,16 @@ export default function LessonsTab() {
                         </p>
                     )}
                 </div>
-                <Button
-                    onClick={() => setShowForm(true)}
-                    disabled={!selectedCourse}
-                    className="gap-2 w-full sm:w-auto"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add lesson
-                </Button>
+                {isOwner && (
+                    <Button
+                        onClick={() => setShowForm(true)}
+                        disabled={!selectedCourse}
+                        className="gap-2 w-full sm:w-auto"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add lesson
+                    </Button>
+                )}
             </div>
 
             {/* Course selector */}
@@ -254,29 +260,31 @@ export default function LessonsTab() {
                                             {topic.description || '-'}
                                         </td>
                                         <td className="px-4 py-2 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(topic)}
-                                                    className="h-7 w-7 p-0"
-                                                >
-                                                    <Edit2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(topic.id)}
-                                                    disabled={deleteLoading === `topic-${topic.id}`}
-                                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                                >
-                                                    {deleteLoading === `topic-${topic.id}` ? (
-                                                        <div className="h-3 w-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    )}
-                                                </Button>
-                                            </div>
+                                            {isOwner && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(topic)}
+                                                        className="h-7 w-7 p-0"
+                                                    >
+                                                        <Edit2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(topic.id)}
+                                                        disabled={deleteLoading === `topic-${topic.id}`}
+                                                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                                    >
+                                                        {deleteLoading === `topic-${topic.id}` ? (
+                                                            <div className="h-3 w-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

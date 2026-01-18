@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, BookOpen } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
-
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ export default function CoursesTab() {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(null);
+    const { user } = useAuth();
 
     const { courses, loading, addCourse, updateCourse, deleteCourse } = useCourses();
     const [values, setValues] = useState({
@@ -269,11 +270,13 @@ export default function CoursesTab() {
                                         {course.estimatedHours ? `${course.estimatedHours}h` : '-'}
                                     </td>
                                     <td className="px-4 py-2 text-right">
-                                        <ActionButtons
-                                            onEdit={() => handleEdit(course)}
-                                            onDelete={() => handleDelete(course.id)}
-                                            isDeleting={deleteLoading === `course-${course.id}`}
-                                        />
+                                        {(course.ownerId == null || course.ownerId === user?.uid) && (
+                                            <ActionButtons
+                                                onEdit={() => handleEdit(course)}
+                                                onDelete={() => handleDelete(course.id)}
+                                                isDeleting={deleteLoading === `course-${course.id}`}
+                                            />
+                                        )}
                                     </td>
                                 </tr>
                             ))}

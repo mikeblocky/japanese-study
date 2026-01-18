@@ -77,8 +77,7 @@ export default function Layout() {
                                             <UserIcon className="h-4 w-4 text-muted-foreground" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{user.username}</p>
-                                            <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+                                            <p className="text-sm font-medium truncate">{user.displayName}</p>
                                         </div>
                                     </div>
                                     <Button
@@ -180,8 +179,7 @@ export default function Layout() {
                                 </div>
                                 {!isCollapsed && (
                                     <div className="flex-1 min-w-0 overflow-hidden">
-                                        <p className="text-sm font-medium truncate text-foreground">{user.username}</p>
-                                        <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+                                        <p className="text-sm font-medium truncate text-foreground">{user.displayName}</p>
                                     </div>
                                 )}
                             </div>
