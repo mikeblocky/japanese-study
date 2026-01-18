@@ -49,8 +49,8 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 <div className="text-base leading-relaxed">{displayContent.reading}</div>
                             </div>
                         )}
-                        {/* Show Meaning */}
-                        {displayContent.english && (
+                        {/* Show Meaning only if different from Reading */}
+                        {displayContent.english && displayContent.english !== displayContent.reading && (
                             <div className="border-b border-border/50 pb-4">
                                 <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
                                 <div className="text-base leading-relaxed">{displayContent.english}</div>
