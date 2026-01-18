@@ -2,8 +2,10 @@ import { cn } from '@/lib/utils';
 import { Check, X } from 'lucide-react';
 
 export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback }) {
+    // Filter out Reading/Meaning since we show them explicitly
     const allFields = Object.entries(additionalData || {}).filter(([key, value]) =>
-        value && String(value).trim() !== ''
+        value && String(value).trim() !== '' &&
+        !['Reading', 'Meaning', 'Kana', 'Furigana', 'English', 'Back'].includes(key)
     );
 
     const formatContent = (text) => {
