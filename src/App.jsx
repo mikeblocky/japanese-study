@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -31,30 +32,32 @@ const ProtectedRoute = () => {
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<Layout />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="courses" element={<CourseList />} />
-                  <Route path="courses/:courseId" element={<CourseDetail />} />
-                  <Route path="study/:topicId" element={<StudySession />} />
-                  <Route path="study" element={<Navigate to="/courses" replace />} />
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="courses" element={<CourseList />} />
+                    <Route path="courses/:courseId" element={<CourseDetail />} />
+                    <Route path="study/:topicId" element={<StudySession />} />
+                    <Route path="study" element={<Navigate to="/courses" replace />} />
 
-                  <Route path="management" element={<ManagementPage />} />
+                    <Route path="management" element={<ManagementPage />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
-    </ToastProvider>
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

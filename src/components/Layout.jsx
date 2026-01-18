@@ -5,13 +5,15 @@ import { cn } from '../lib/utils';
 import {
     BookOpen, Home, Search, Settings,
     PanelLeftClose, PanelLeftOpen, Menu, X,
-    LogOut, User as UserIcon
+    LogOut, User as UserIcon, Moon, Sun
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 
 export default function Layout() {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
@@ -68,6 +70,20 @@ export default function Layout() {
                                 );
                             })}
                         </nav>
+
+                        {/* Mobile Theme Toggle */}
+                        <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-3 px-3 mt-4"
+                            onClick={toggleTheme}
+                        >
+                            {theme === 'dark' ? (
+                                <Sun className="h-5 w-5 shrink-0 text-amber-500" />
+                            ) : (
+                                <Moon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            )}
+                            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                        </Button>
 
                         <div className="mt-auto pt-4 border-t space-y-2">
                             {user ? (
@@ -166,6 +182,26 @@ export default function Layout() {
                         );
                     })}
                 </nav>
+
+                {/* Theme Toggle */}
+                <div className="p-2 border-t border-border/40">
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start gap-3 px-3",
+                            isCollapsed && "justify-center px-2"
+                        )}
+                        onClick={toggleTheme}
+                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    >
+                        {theme === 'dark' ? (
+                            <Sun className="h-5 w-5 shrink-0 text-amber-500" />
+                        ) : (
+                            <Moon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                        )}
+                        {!isCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+                    </Button>
+                </div>
 
                 <div className="p-2 border-t border-border/40 space-y-1">
                     {user ? (
