@@ -325,7 +325,8 @@ export default function StudySession() {
                     onFlip={() => setIsFlipped(!isFlipped)}
                     onAnswer={handleNext}
                     feedback={feedback}
-                    showFurigana={true}
+                    audioUrl={currentItem.audioUrl}
+                    imageUrl={currentItem.imageUrl}
                 />
             </div>
         </div>

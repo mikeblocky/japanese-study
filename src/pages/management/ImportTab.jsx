@@ -13,6 +13,7 @@ export default function ImportTab() {
     const [result, setResult] = useState(null);
     const [progress, setProgress] = useState(null);
     const [visibility, setVisibility] = useState('PRIVATE');
+    const [includeMedia, setIncludeMedia] = useState(false);
 
     const { loadCourses } = useCourses(false); // Don't auto-load
     const toast = useToast();
@@ -32,12 +33,12 @@ export default function ImportTab() {
             return;
         }
 
-        // Check file size (max 50MB)
-        const maxSize = 50 * 1024 * 1024;
+        // Check file size (max 200MB for media imports)
+        const maxSize = 200 * 1024 * 1024;
         if (ankiFile.size > maxSize) {
             setResult({
                 success: false,
-                message: 'File is too large. Maximum file size is 50MB. Try exporting a smaller deck.'
+                message: 'File is too large. Maximum file size is 200MB. Try exporting a smaller deck.'
             });
             return;
         }
@@ -49,8 +50,8 @@ export default function ImportTab() {
 
             const formData = new FormData();
             formData.append('file', ankiFile);
-            formData.append('skipMedia', 'true');
-            formData.append('textOnly', 'true');
+            formData.append('skipMedia', includeMedia ? 'false' : 'true');
+            formData.append('textOnly', includeMedia ? 'false' : 'true');
             formData.append('visibility', visibility);
 
             setProgress('Processing deck...');
@@ -153,7 +154,7 @@ export default function ImportTab() {
                             Upload Deck
                         </CardTitle>
                         <CardDescription>
-                            Select an .apkg file (Max 50MB)
+                            Select an .apkg file (Max 200MB)
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -202,6 +203,23 @@ export default function ImportTab() {
                                 <p className="text-xs text-center text-muted-foreground animate-pulse">{progress}</p>
                             </div>
                         )}
+
+                        {/* Include Media option */}
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={includeMedia}
+                                onChange={(e) => setIncludeMedia(e.target.checked)}
+                                disabled={importing}
+                                className="w-4 h-4 accent-primary"
+                            />
+                            <span className="text-sm">
+                                Include media (images, audio)
+                            </span>
+                        </label>
+                        <p className="text-xs text-muted-foreground -mt-2">
+                            Enabling media import may increase storage usage significantly
+                        </p>
 
                         <Button
                             onClick={handleImport}

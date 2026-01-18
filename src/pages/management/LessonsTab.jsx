@@ -245,10 +245,10 @@ export default function LessonsTab() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {topics.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)).map((topic, i) => (
+                                {topics.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)).map((topic, i) => (
                                     <tr key={topic.id} className="hover:bg-secondary/20 transition-colors">
                                         <td className="px-4 py-2 font-mono text-xs text-muted-foreground text-center">
-                                            {String(topic.orderIndex || i + 1).padStart(2, '0')}
+                                            {String(i + 1).padStart(2, '0')}
                                         </td>
                                         <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
                                             {topic.id}

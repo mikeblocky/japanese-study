@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Check, X } from 'lucide-react';
+import { AudioPlayer, MediaImage } from './MediaComponents';
 
-export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback }) {
+export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback, audioUrl, imageUrl }) {
     // Collect values already shown (reading and meaning)
     const shownValues = new Set();
     if (displayContent.reading) shownValues.add(displayContent.reading.trim().toLowerCase());
@@ -70,7 +71,20 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 </div>
                             );
                         })}
-                        {allFields.length === 0 && !displayContent.reading && !displayContent.english && (
+
+                        {/* Audio player - show if there's audio */}
+                        {audioUrl && (
+                            <div className="flex justify-center pt-2">
+                                <AudioPlayer src={audioUrl} />
+                            </div>
+                        )}
+
+                        {/* Image display - show if there's an image */}
+                        {imageUrl && (
+                            <MediaImage src={imageUrl} alt={displayContent.term} />
+                        )}
+
+                        {allFields.length === 0 && !displayContent.reading && !displayContent.english && !audioUrl && !imageUrl && (
                             <div className="text-center py-4 text-muted-foreground">No data</div>
                         )}
                     </div>
@@ -96,3 +110,4 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
         </div>
     );
 }
+
