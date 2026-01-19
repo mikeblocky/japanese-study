@@ -1,12 +1,12 @@
 import api from '@/lib/api';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Swords, Trophy, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Swords, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProgress } from '@/hooks/useProgress';
 
 // Extracted components
-import { StudyProgress, StudyStats, getDisplayContent } from '@/components/study/StudyComponents';
+import { StudyProgress, getDisplayContent } from '@/components/study/StudyComponents';
 import FlashcardMode from '@/components/study/FlashcardMode';
 import { Button } from '@/components/ui/button';
 
