@@ -14,7 +14,6 @@ export default function ImportTab() {
     const [result, setResult] = useState(null);
     const [progress, setProgress] = useState(null);
     const [visibility, setVisibility] = useState('PRIVATE');
-    const [includeMedia, setIncludeMedia] = useState(false);
 
     const { loadCourses } = useCourses(false); // Don't auto-load
     const toast = useToast();
@@ -51,8 +50,6 @@ export default function ImportTab() {
 
             const formData = new FormData();
             formData.append('file', ankiFile);
-            formData.append('skipMedia', includeMedia ? 'false' : 'true');
-            formData.append('textOnly', includeMedia ? 'false' : 'true');
             formData.append('visibility', visibility);
 
             setProgress('Processing deck...');
@@ -76,7 +73,7 @@ export default function ImportTab() {
             let message = `Successfully imported: ${coursesCount} course${coursesCount !== 1 ? 's' : ''}, ${topicsCount} lesson${topicsCount !== 1 ? 's' : ''}, ${itemsCount} word${itemsCount !== 1 ? 's' : ''}`;
 
             if (skippedCount > 0) {
-                message += `. Skipped ${skippedCount} item${skippedCount !== 1 ? 's' : ''} with media or unsupported content.`;
+                message += `. Skipped ${skippedCount} item${skippedCount !== 1 ? 's' : ''}.`;
             }
 
             setResult({
@@ -95,41 +92,27 @@ export default function ImportTab() {
             setAnkiFile(null);
             const input = document.getElementById('anki-file');
             if (input) input.value = '';
-            loadCourses(); // Refresh courses
+            loadCourses();
             toast.success('Import successful!');
         } catch (err) {
-            console.error('Failed to import Anki deck', err);
+
+            const errorMap = {
+                'ECONNABORTED': 'Import timed out. Render free tier may be sleeping. Try again in 1-2 minutes.',
+                500: 'Server error. Backend may be starting up (Render free tier takes 1-2 min). Wait and retry.',
+                413: 'File too large. Try a smaller deck.',
+                400: err.response?.data?.message || 'Invalid deck format.',
+                403: 'Access denied. Admin privileges required.',
+                'Network Error': 'Network error. Backend may be down or restarting. Retry shortly.'
+            };
 
             let errorMessage = 'Failed to import Anki deck. ';
-            let technicalDetails = '';
-
-            if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-                errorMessage += 'Import timed out after 5 minutes. This usually means Render free tier is sleeping or overloaded. Try again in 1-2 minutes after the service wakes up.';
-                technicalDetails = 'Timeout after 300 seconds';
-            } else if (err.response?.status === 500) {
-                errorMessage += 'Server error occurred. The backend service might still be starting up (Render free tier can take 1-2 minutes to wake up). Please wait a moment and try again.';
-                technicalDetails = err.response?.data?.error || err.response?.data?.message || 'Internal server error';
-            } else if (err.response?.status === 413) {
-                errorMessage += 'File is too large for the server. Try exporting a smaller deck.';
-                technicalDetails = 'File size exceeds server limit';
-            } else if (err.response?.status === 400) {
-                errorMessage += err.response.data?.message || 'Invalid deck format. Make sure you exported it correctly from Anki.';
-                technicalDetails = err.response?.data?.error || 'Bad request';
-            } else if (err.response?.status === 403) {
-                errorMessage += 'Access denied. You need admin privileges to import decks.';
-                technicalDetails = 'Authorization failed';
-            } else if (err.message.includes('Network Error') || err.message.includes('ERR_QUIC') || err.message.includes('ERR_CONNECTION')) {
-                errorMessage += 'Network connection error. The backend service might be down or restarting. If using Render free tier, the service may be sleeping and will wake up in 1-2 minutes. Please try again shortly.';
-                technicalDetails = err.message;
-            } else {
-                errorMessage += err.response?.data?.message || err.message || 'Unknown error occurred. Please try again.';
-                technicalDetails = err.response?.data?.error || err.message || 'Unknown error';
-            }
+            const errorKey = err.code || err.response?.status || (err.message?.includes('Network') ? 'Network Error' : null);
+            errorMessage += errorMap[errorKey] || err.response?.data?.message || err.message || 'Unknown error.';
 
             setResult({
                 success: false,
                 message: errorMessage,
-                technicalDetails: technicalDetails
+                technicalDetails: err.response?.data?.error || err.message || 'Unknown error'
             });
 
             toast.error('Import failed');
@@ -192,18 +175,7 @@ export default function ImportTab() {
                             </div>
                         )}
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <FormField label="Include media" id="include-media">
-                                <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-background">
-                                    <div className="text-sm text-muted-foreground">Images & audio (slower)</div>
-                                    <Switch
-                                        id="include-media"
-                                        checked={includeMedia}
-                                        onCheckedChange={setIncludeMedia}
-                                        disabled={importing}
-                                    />
-                                </div>
-                            </FormField>
+                        <div className="grid gap-4">
                             <FormField label="Visibility" id="visibility">
                                 <Select
                                     value={visibility}
@@ -222,10 +194,6 @@ export default function ImportTab() {
                             <div className="flex items-center gap-2">
                                 <Shield className="h-3.5 w-3.5" />
                                 Decks stay private by default; flip to Public if you want to share.
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Info className="h-3.5 w-3.5" />
-                                Media adds size but is required for audio/images.
                             </div>
                         </div>
 
@@ -295,18 +263,7 @@ export default function ImportTab() {
                         </Card>
                     )}
 
-                    <Card className="border border-amber-300/60 bg-amber-50/60">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-amber-700 text-base">
-                                <AlertCircle className="h-5 w-5" /> Media persistence warning
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm text-amber-800 space-y-2">
-                            <p>On Render, media stored on the local disk disappears after restart. Use a persistent disk or re-import with media each deploy.</p>
-                            <p className="text-xs text-amber-700/90">If you imported without media, images/audio will not be visible or playable. If you imported with media and see 404s or missing playback after a restart, re-import the deck with media and ensure storage is persistent.</p>
-                            <p className="text-xs text-amber-700/90">Audio/video playback requires media to be included; text-only imports will show words but no media assets.</p>
-                        </CardContent>
-                    </Card>
+
 
                     <Card className="bg-secondary/20 border-none">
                         <CardHeader>
@@ -322,11 +279,7 @@ export default function ImportTab() {
                                     <li>Deck gear → Export</li>
                                     <li>Format: Anki Deck Package (*.apkg)</li>
                                     <li>Uncheck “Include scheduling information”</li>
-                                    <li>Check “Include media”</li>
                                 </ol>
-                            </div>
-                            <div className="p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs">
-                                Large decks with media can take a few minutes; keep the tab open until done.
                             </div>
                         </CardContent>
                     </Card>

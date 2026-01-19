@@ -13,12 +13,21 @@ import { ToastContext } from '@/contexts/ToastContext';
 export function useToast() {
     const context = useContext(ToastContext);
     if (!context) {
-        // Fallback to console if ToastProvider not in tree
+        // Fallback if ToastProvider not in tree - use console for development
+        if (process.env.NODE_ENV === 'development') {
+            return {
+                success: (msg) => console.log('✓', msg),
+                error: (msg) => console.error('✗', msg),
+                info: (msg) => console.info('ℹ', msg),
+                warning: (msg) => console.warn('⚠', msg),
+            };
+        }
+        // In production, return no-op functions
         return {
-            success: (msg) => console.log('✓', msg),
-            error: (msg) => console.error('✗', msg),
-            info: (msg) => console.info('ℹ', msg),
-            warning: (msg) => console.warn('⚠', msg),
+            success: () => {},
+            error: () => {},
+            info: () => {},
+            warning: () => {},
         };
     }
     return context;

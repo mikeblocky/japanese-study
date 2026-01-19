@@ -11,9 +11,6 @@ import {
     SelectValue
 } from '@/components/ui/select';
 
-/**
- * Reusable form card wrapper with header and close button.
- */
 export function FormCard({ title, onClose, children, onSubmit, submitLabel = 'Add', isEditing = false }) {
     return (
         <Card className="border-primary">
@@ -41,9 +38,6 @@ export function FormCard({ title, onClose, children, onSubmit, submitLabel = 'Ad
     );
 }
 
-/**
- * Empty state placeholder with icon and optional action button.
- */
 export function EmptyState({ icon: Icon, title, description, actionLabel, onAction }) {
     return (
         <Card>
@@ -62,9 +56,6 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, onActi
     );
 }
 
-/**
- * Inline action buttons (edit/delete) with loading state.
- */
 export function ActionButtons({ onEdit, onDelete, isDeleting = false }) {
     return (
         <div className="flex gap-1 shrink-0">
@@ -88,9 +79,6 @@ export function ActionButtons({ onEdit, onDelete, isDeleting = false }) {
     );
 }
 
-/**
- * Form field with label - reduces repetitive markup.
- */
 export function FormField({ label, id, children, required = false }) {
     return (
         <div className="space-y-2">
@@ -100,9 +88,6 @@ export function FormField({ label, id, children, required = false }) {
     );
 }
 
-/**
- * Select dropdown styled consistently.
- */
 export function Select({ value, onChange, options, placeholder, disabled = false, className = '' }) {
     const EMPTY_VALUE = '__empty__';
     const normalizedValue = value === '' ? EMPTY_VALUE : value;
@@ -131,9 +116,6 @@ export function Select({ value, onChange, options, placeholder, disabled = false
     );
 }
 
-/**
- * Page header with title and optional action.
- */
 export function PageHeader({ title, subtitle, action }) {
     return (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
