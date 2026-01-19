@@ -47,7 +47,7 @@ export default function CourseList() {
             <div className="relative">
                 <div className="absolute -left-10 top-0 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
                 <PageHeader
-                    title={<span className="font-serif italic text-4xl">Your library</span>}
+                    title={<span className="font-serif text-4xl">Your library</span>}
                     description="Browse courses you've created or imported."
                 />
             </div>
@@ -95,8 +95,8 @@ export default function CourseList() {
                                     )}
                                 </div>
 
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-semibold tracking-tight group-hover:text-primary transition-colors">{course.title}</h3>
+                                <div className="space-y-1 min-w-0">
+                                    <h3 className="text-xl font-semibold tracking-tight group-hover:text-primary transition-colors break-words line-clamp-2" title={course.title}>{course.title}</h3>
                                     <CardDescription className="text-sm leading-relaxed line-clamp-2">
                                         {course.description || "Japanese vocab, grammar, and kanji practice."}
                                     </CardDescription>

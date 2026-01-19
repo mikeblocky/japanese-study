@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    BookOpen, ChevronRight, Lightbulb, Zap, ArrowRight, Sparkles
+    ArrowRight,
+    BarChart3,
+    BookOpen,
+    ChevronRight,
+    Lightbulb,
+    Sparkles,
+    Zap
 } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useProgress } from '@/hooks/useProgress';
@@ -72,6 +78,11 @@ export default function Dashboard() {
                         </Button>
                         <Button asChild variant="outline" className="rounded-full px-6 h-12 border-primary/20 hover:bg-primary/5">
                             <Link to="/management">Open workspace</Link>
+                        </Button>
+                        <Button asChild variant="outline" className="rounded-full px-6 h-12 border-indigo-300/40 hover:bg-indigo-50 text-indigo-700">
+                            <Link to="/insights" className="flex items-center gap-2">
+                                <BarChart3 className="h-4 w-4" /> Insights
+                            </Link>
                         </Button>
                     </div>
                 </div>

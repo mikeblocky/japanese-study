@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, ShieldAlert, FolderOpen, Tag, Filter } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +43,7 @@ export default function CoursesTab() {
     const [showMineOnly, setShowMineOnly] = useState(false);
     const { user } = useAuth();
 
-    const { courses, loading, addCourse, updateCourse, deleteCourse } = useCourses();
+    const { courses, loading, addCourse, updateCourse, deleteCourse, getCourseSummary } = useCourses();
     const [values, setValues] = useState({
         title: '',
         description: '',
@@ -54,8 +54,14 @@ export default function CoursesTab() {
         difficulty: 3,
         estimatedHours: '',
     });
+    const [draft, setDraft] = useState(null);
+    const [history, setHistory] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+    const [summary, setSummary] = useState(null);
 
     const handleChange = (name, value) => {
+        setHistory(prev => [...prev.slice(-9), values]);
+        setRedoStack([]);
         setValues(prev => ({ ...prev, [name]: value }));
     };
 
@@ -70,6 +76,52 @@ export default function CoursesTab() {
             difficulty: 3,
             estimatedHours: '',
         });
+    };
+    useEffect(() => {
+        const saved = localStorage.getItem('course-form-draft');
+        if (saved) {
+            try {
+                setValues(JSON.parse(saved));
+            } catch (_) {
+                /* ignore */
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (selectedCourse) {
+            getCourseSummary(selectedCourse.id).then(res => {
+                if (res.success) setSummary(res.data);
+            });
+        } else {
+            setSummary(null);
+        }
+    }, [selectedCourse, getCourseSummary]);
+
+    const handleUndo = () => {
+        setHistory(prev => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            setRedoStack(r => [...r, values]);
+            setValues(last);
+            return prev.slice(0, -1);
+        });
+    };
+
+    const handleRedo = () => {
+        setRedoStack(prev => {
+            if (prev.length === 0) return prev;
+            const next = prev[prev.length - 1];
+            setHistory(h => [...h, values]);
+            setValues(next);
+            return prev.slice(0, -1);
+        });
+    };
+
+    const saveDraft = () => {
+        localStorage.setItem('course-form-draft', JSON.stringify(values));
+        setDraft(values);
+        toast.success('Draft saved');
     };
     const toast = useToast();
 
@@ -90,6 +142,7 @@ export default function CoursesTab() {
             if (result.course) setSelectedCourse(result.course);
             else setSelectedCourse(null);
             reset();
+            setSummary(null);
         } else {
             toast.error(result.error || 'Operation failed');
         }
@@ -212,10 +265,10 @@ export default function CoursesTab() {
                                             onClick={() => handleEdit(course)}
                                             className={`w-full text-left px-4 py-3 flex items-start justify-between gap-3 transition ${active ? 'bg-secondary/60' : 'hover:bg-secondary/40'}`}
                                         >
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-medium leading-tight">{course.title}</span>
+                                            <div className="space-y-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                    <span className="font-medium leading-tight truncate" title={course.title}>{course.title}</span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                                     {course.category && <Badge variant="secondary">{course.category}</Badge>}
@@ -355,6 +408,15 @@ export default function CoursesTab() {
                             />
                         </div>
 
+                        {summary && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-sm">
+                                <Stat label="Lessons" value={summary.topics} />
+                                <Stat label="Items" value={summary.items} />
+                                <Stat label="Studied" value={summary.studied} />
+                                <Stat label="Progress" value={`${Math.round(summary.progressPercent || 0)}%`} />
+                            </div>
+                        )}
+
                         <div className="flex flex-wrap gap-2 pt-2">
                             <Button onClick={handleSubmit} className="flex-1 sm:flex-none sm:w-auto" disabled={disableEdits}>
                                 {editingId ? 'Update' : 'Create'}
@@ -362,6 +424,11 @@ export default function CoursesTab() {
                             <Button variant="outline" onClick={() => { setSelectedCourse(null); setEditingId(null); reset(); }} className="flex-1 sm:flex-none sm:w-auto">
                                 Cancel
                             </Button>
+                            <Button variant="secondary" onClick={saveDraft} className="flex-1 sm:flex-none sm:w-auto" disabled={disableEdits}>
+                                Save draft
+                            </Button>
+                            <Button variant="ghost" onClick={handleUndo} className="sm:w-auto" disabled={history.length === 0}>Undo</Button>
+                            <Button variant="ghost" onClick={handleRedo} className="sm:w-auto" disabled={redoStack.length === 0}>Redo</Button>
                             {editingId && isOwner && (
                                 <Button
                                     variant="ghost"
@@ -381,6 +448,15 @@ export default function CoursesTab() {
                 </Card>
             </div>
         </div >
+    );
+}
+
+function Stat({ label, value }) {
+    return (
+        <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="text-sm font-semibold">{value ?? 0}</div>
+        </div>
     );
 }
 

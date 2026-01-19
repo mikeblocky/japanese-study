@@ -32,10 +32,10 @@ export function CourseSelectorCard({
                                     className={`w-full px-4 py-3 flex items-start justify-between gap-3 text-left transition ${active ? 'bg-secondary/60' : 'hover:bg-secondary/40'
                                         }`}
                                 >
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-medium leading-tight">{course.title}</span>
+                                    <div className="space-y-1 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                                            <span className="font-medium leading-tight truncate" title={course.title}>{course.title}</span>
                                         </div>
                                         {!compact && course.category && (
                                             <Badge variant="secondary" className="text-xs">{course.category}</Badge>

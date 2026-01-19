@@ -15,6 +15,13 @@ export default function StudySession() {
     const { recordProgress } = useProgress();
     const isChallenge = topicId === 'challenge';
 
+    const ratingMeta = {
+        again: { label: 'Again', tone: 'danger' },
+        hard: { label: 'Hard', tone: 'warning' },
+        good: { label: 'Good', tone: 'success' },
+        easy: { label: 'Easy', tone: 'primary' }
+    };
+
     // Core state
     const [queue, setQueue] = useState([]);
     const [initialCount, setInitialCount] = useState(0);
@@ -27,7 +34,7 @@ export default function StudySession() {
     // UI state
     const [isFlipped, setIsFlipped] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
-    const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
+    const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
     const [feedback, setFeedback] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -93,8 +100,26 @@ export default function StudySession() {
                 setIsFlipped(true);
             }
             if (isFlipped) {
-                if (e.key === 'ArrowRight' || e.key === '1') handleNext(true);
-                if (e.key === 'ArrowLeft' || e.key === '2') handleNext(false);
+                const keyMap = {
+                    ArrowLeft: 'again',
+                    ArrowDown: 'hard',
+                    ArrowUp: 'good',
+                    ArrowRight: 'easy',
+                    Digit1: 'again',
+                    Digit2: 'hard',
+                    Digit3: 'good',
+                    Digit4: 'easy',
+                    Numpad1: 'again',
+                    Numpad2: 'hard',
+                    Numpad3: 'good',
+                    Numpad4: 'easy'
+                };
+
+                const rating = keyMap[e.code];
+                if (rating) {
+                    e.preventDefault();
+                    handleNext(rating);
+                }
             }
         };
 
@@ -102,27 +127,24 @@ export default function StudySession() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isFinished, isFlipped, feedback, loading, queue]);
 
-    const handleNext = async (correct) => {
-        setFeedback(correct ? 'correct' : 'incorrect');
+    const handleNext = async (ratingInput) => {
+        const rating = (ratingInput || 'good').toLowerCase();
+        setFeedback(rating);
 
         const currentItem = queue[0];
 
-        let newInterval = currentItem.userSrsInterval;
+        let newInterval = currentItem?.userSrsInterval ?? 0;
 
-        // Record progress
         if (currentItem?.id) {
             try {
-                // Pass harshMode = isChallenge
-                const result = await recordProgress(currentItem.id, correct, isChallenge);
+                const result = await recordProgress(currentItem.id, rating, isChallenge);
                 newInterval = result.interval;
 
-                // Track for Report Card (Only first attempt counts for history)
-                // We check if this item ID is already in history to avoid dups from retries
                 setSessionHistory(prev => {
                     if (prev.find(h => h.item.id === currentItem.id)) return prev;
                     return [...prev, {
                         item: currentItem,
-                        correct,
+                        rating,
                         oldInterval: currentItem.userSrsInterval || 0,
                         newInterval: result.interval
                     }];
@@ -138,20 +160,23 @@ export default function StudySession() {
             setIsFlipped(false);
 
             setStats(prev => ({
-                correct: correct ? prev.correct + 1 : prev.correct,
-                incorrect: !correct ? prev.incorrect + 1 : prev.incorrect
+                ...prev,
+                [rating]: (prev[rating] || 0) + 1
             }));
 
-            // --- ALGORITHM: Retry Logic ---
             const nextQueue = [...queue];
             const processedItem = nextQueue.shift();
+            const updatedItem = processedItem ? { ...processedItem, userSrsInterval: newInterval } : processedItem;
 
-            if (correct) {
+            const shouldRequeue = rating === 'again' || rating === 'hard';
+            if (shouldRequeue && updatedItem) {
+                const offset = rating === 'again' ? 1 : 3 + Math.floor(Math.random() * 2);
+                const insertIndex = Math.min(nextQueue.length, offset);
+                nextQueue.splice(insertIndex, 0, updatedItem);
+            }
+
+            if (!shouldRequeue) {
                 setCompletedCount(prev => prev + 1);
-            } else {
-                // Re-queue logic
-                const insertIndex = Math.min(nextQueue.length, 3 + Math.floor(Math.random() * 3));
-                nextQueue.splice(insertIndex, 0, processedItem);
             }
 
             setQueue(nextQueue);
@@ -197,8 +222,10 @@ export default function StudySession() {
 
     // Finished - Report Card View
     if (isFinished) {
-        const total = stats.correct + stats.incorrect;
-        const accuracy = total ? Math.round((stats.correct / total) * 100) : 0;
+        const total = Object.values(stats).reduce((sum, val) => sum + val, 0);
+        const promoted = stats.good + stats.easy;
+        const requeued = stats.again + stats.hard;
+        const accuracy = total ? Math.round((promoted / total) * 100) : 0;
 
         return (
             <div className="max-w-5xl mx-auto py-12 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-lg">
@@ -214,8 +241,8 @@ export default function StudySession() {
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-3 mb-12">
-                    <SummaryCard label="Correct" value={stats.correct} tone="success" />
-                    <SummaryCard label="Incorrect" value={stats.incorrect} tone="danger" />
+                    <SummaryCard label="Promoted (Good/Easy)" value={promoted} tone="success" />
+                    <SummaryCard label="Requeued (Again/Hard)" value={requeued} tone="danger" />
                     <SummaryCard label="Accuracy" value={`${accuracy}%`} tone="neutral" />
                 </div>
 
@@ -229,13 +256,26 @@ export default function StudySession() {
                             const delta = record.newInterval - record.oldInterval;
                             const isLoss = delta < 0;
                             const isGain = delta > 0;
+                            const ratingLabel = ratingMeta[record.rating]?.label || record.rating;
+                            const ratingDot = {
+                                again: 'bg-red-500',
+                                hard: 'bg-amber-500',
+                                good: 'bg-emerald-500',
+                                easy: 'bg-sky-500'
+                            }[record.rating] || 'bg-muted-foreground';
+                            const ratingPill = {
+                                again: 'bg-red-50 text-red-700 border-red-200',
+                                hard: 'bg-amber-50 text-amber-700 border-amber-200',
+                                good: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                easy: 'bg-sky-50 text-sky-700 border-sky-200'
+                            }[record.rating] || 'bg-muted text-foreground border-border';
 
                             return (
                                 <div key={idx} className="px-7 py-4 grid grid-cols-[1fr_auto_auto] items-center gap-4 hover:bg-muted/20 transition-colors text-base">
                                     <div className="flex items-start gap-3 min-w-0">
                                         <span className={cn(
                                             "mt-1 w-2 h-2 rounded-full shrink-0",
-                                            record.correct ? "bg-green-500" : "bg-red-500"
+                                            ratingDot
                                         )} />
                                         <div className="min-w-0">
                                             <div className="font-semibold truncate text-lg">
@@ -252,11 +292,17 @@ export default function StudySession() {
                                         <div className="font-bold text-foreground text-base">Lv.{record.newInterval}</div>
                                     </div>
 
-                                    <div className={cn(
-                                        "text-right font-bold text-base",
-                                        isLoss ? "text-red-500" : (isGain ? "text-green-500" : "text-muted-foreground")
-                                    )}>
-                                        {isLoss ? '↓' : (isGain ? '↑' : '=')}{Math.abs(delta)}
+                                    <div className="text-right flex flex-col items-end gap-1">
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded-full text-xs font-semibold border",
+                                            ratingPill
+                                        )}>{ratingLabel}</span>
+                                        <span className={cn(
+                                            "font-bold text-base",
+                                            isLoss ? "text-red-500" : (isGain ? "text-green-500" : "text-muted-foreground")
+                                        )}>
+                                            {isLoss ? '↓' : (isGain ? '↑' : '=')}{Math.abs(delta)}
+                                        </span>
                                     </div>
                                 </div>
                             );

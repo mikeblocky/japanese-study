@@ -22,15 +22,20 @@ export default function LessonsTab() {
     const isOwner = selectedCourse && (selectedCourse.ownerId == null || selectedCourse.ownerId === user?.uid);
 
     // Custom hooks!
-    const { courses } = useCourses();
-    const { topics, loadTopics, addTopic, updateTopic, deleteTopic } = useTopics(selectedCourse?.id);
+    const { courses, getCourseSummary } = useCourses();
+    const { topics, loadTopics, addTopic, updateTopic, deleteTopic, reorderTopicsAlphabetically } = useTopics(selectedCourse?.id);
     const [values, setValues] = useState({
         title: '',
         description: '',
         orderIndex: 1
     });
+    const [summary, setSummary] = useState(null);
+    const [history, setHistory] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
 
     const handleChange = (name, value) => {
+        setHistory(prev => [...prev.slice(-9), values]);
+        setRedoStack([]);
         setValues(prev => ({ ...prev, [name]: value }));
     };
 
@@ -46,12 +51,26 @@ export default function LessonsTab() {
     useEffect(() => {
         if (selectedCourse) {
             loadTopics(selectedCourse.id);
+            getCourseSummary(selectedCourse.id).then(res => {
+                if (res.success) setSummary(res.data);
+            });
+            const saved = localStorage.getItem(`lesson-draft-${selectedCourse.id}`);
+            if (saved) {
+                try {
+                    setValues(JSON.parse(saved));
+                } catch (_) {
+                    /* ignore */
+                }
+            }
         } else {
             setShowForm(false);
             setEditingId(null);
             reset();
+            setSummary(null);
+            setHistory([]);
+            setRedoStack([]);
         }
-    }, [selectedCourse, loadTopics]);
+    }, [selectedCourse, loadTopics, getCourseSummary]);
 
     const handleSubmit = async () => {
         if (!values.title || !selectedCourse) {
@@ -75,6 +94,9 @@ export default function LessonsTab() {
             setShowForm(false);
             setEditingId(null);
             reset();
+            getCourseSummary(selectedCourse.id).then(res => {
+                if (res.success) setSummary(res.data);
+            });
             loadTopics(selectedCourse.id);
         } else {
             toast.error(result.error || 'Operation failed');
@@ -102,6 +124,9 @@ export default function LessonsTab() {
             toast.success('Lesson deleted');
             if (selectedCourse) {
                 loadTopics(selectedCourse.id);
+                getCourseSummary(selectedCourse.id).then(res => {
+                    if (res.success) setSummary(res.data);
+                });
             }
         } else {
             toast.error(result.error || 'Failed to delete lesson');
@@ -114,6 +139,43 @@ export default function LessonsTab() {
         reset();
     };
 
+    const handleUndo = () => {
+        setHistory(prev => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            setRedoStack(r => [...r, values]);
+            setValues(last);
+            return prev.slice(0, -1);
+        });
+    };
+
+    const handleRedo = () => {
+        setRedoStack(prev => {
+            if (prev.length === 0) return prev;
+            const next = prev[prev.length - 1];
+            setHistory(h => [...h, values]);
+            setValues(next);
+            return prev.slice(0, -1);
+        });
+    };
+
+    const saveDraft = () => {
+        if (!selectedCourse) return;
+        localStorage.setItem(`lesson-draft-${selectedCourse.id}`, JSON.stringify(values));
+        toast.success('Draft saved');
+    };
+
+    const handleReorder = async () => {
+        if (!selectedCourse) return;
+        const res = await reorderTopicsAlphabetically(selectedCourse.id);
+        if (res.success) {
+            toast.success('Lessons reordered A→Z');
+            loadTopics(selectedCourse.id);
+        } else {
+            toast.error(res.error || 'Reorder failed');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -123,14 +185,24 @@ export default function LessonsTab() {
                         Pick a course on the left, then add or edit lessons inline.
                     </p>
                 </div>
-                <Button
-                    onClick={() => setShowForm(true)}
-                    disabled={!selectedCourse || !isOwner}
-                    className="gap-2 w-full sm:w-auto"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add lesson
-                </Button>
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                    <Button
+                        variant="outline"
+                        onClick={handleReorder}
+                        disabled={!selectedCourse || !isOwner}
+                        className="gap-2"
+                    >
+                        Reorder A→Z
+                    </Button>
+                    <Button
+                        onClick={() => setShowForm(true)}
+                        disabled={!selectedCourse || !isOwner}
+                        className="gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add lesson
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -224,14 +296,19 @@ export default function LessonsTab() {
                                         placeholder="Brief description of the lesson"
                                     />
                                 </div>
-                                <div className="flex gap-2 pt-2">
-                                    <Button onClick={handleSubmit} className="flex-1" disabled={!selectedCourse}>
+                                <div className="flex flex-wrap gap-2 pt-2">
+                                    <Button onClick={handleSubmit} className="flex-1 sm:flex-none sm:w-auto" disabled={!selectedCourse}>
                                         <Check className="mr-2 h-4 w-4" />
                                         {editingId ? 'Update' : 'Add'}
                                     </Button>
-                                    <Button variant="outline" onClick={closeForm} className="flex-1">
+                                    <Button variant="outline" onClick={closeForm} className="flex-1 sm:flex-none sm:w-auto">
                                         Cancel
                                     </Button>
+                                    <Button variant="secondary" onClick={saveDraft} className="flex-1 sm:flex-none sm:w-auto" disabled={!selectedCourse}>
+                                        Save draft
+                                    </Button>
+                                    <Button variant="ghost" onClick={handleUndo} className="sm:w-auto" disabled={history.length === 0}>Undo</Button>
+                                    <Button variant="ghost" onClick={handleRedo} className="sm:w-auto" disabled={redoStack.length === 0}>Redo</Button>
                                 </div>
                             </CardContent>
                         </Card>
@@ -245,6 +322,17 @@ export default function LessonsTab() {
                                     <h3 className="font-semibold">Select a course</h3>
                                     <p className="text-sm text-muted-foreground">Pick a course on the left to manage its lessons.</p>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {selectedCourse && summary && (
+                        <Card className="bg-muted/40 border-dashed">
+                            <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <Stat label="Lessons" value={summary.topics} />
+                                <Stat label="Items" value={summary.items} />
+                                <Stat label="Studied" value={summary.studied} />
+                                <Stat label="Progress" value={`${Math.round(summary.progressPercent || 0)}%`} />
                             </CardContent>
                         </Card>
                     )}
@@ -319,6 +407,15 @@ export default function LessonsTab() {
                 </div>
             </div>
 
+        </div>
+    );
+}
+
+function Stat({ label, value }) {
+    return (
+        <div className="rounded-md border bg-background px-3 py-2">
+            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="text-sm font-semibold">{value ?? 0}</div>
         </div>
     );
 }

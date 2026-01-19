@@ -1,6 +1,4 @@
 import { cn } from '@/lib/utils';
-import { Check, X } from 'lucide-react';
-import { useEffect } from 'react';
 
 // Component to render text content (no media support)
 function RichContent({ text }) {
@@ -9,32 +7,19 @@ function RichContent({ text }) {
 }
 
 export default function FlashcardMode({ displayContent, additionalData = {}, isFlipped, onFlip, onAnswer, feedback }) {
-    // Keyboard shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (feedback) return; // Don't handle keys during feedback
+    const feedbackStyles = {
+        again: "border-red-400/70 shadow-[0_10px_40px_-20px_rgba(248,113,113,0.6)]",
+        hard: "border-amber-300/70 shadow-[0_10px_40px_-20px_rgba(251,191,36,0.5)]",
+        good: "border-emerald-400/70 shadow-[0_10px_40px_-20px_rgba(16,185,129,0.6)]",
+        easy: "border-sky-400/70 shadow-[0_10px_40px_-20px_rgba(56,189,248,0.55)]"
+    };
 
-            if (!isFlipped) {
-                // Space or Enter to flip
-                if (e.code === 'Space' || e.code === 'Enter') {
-                    e.preventDefault();
-                    onFlip();
-                }
-            } else {
-                // Arrow keys to answer
-                if (e.code === 'ArrowLeft' || e.code === 'Digit1') {
-                    e.preventDefault();
-                    onAnswer(false);
-                } else if (e.code === 'ArrowRight' || e.code === 'Digit2') {
-                    e.preventDefault();
-                    onAnswer(true);
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFlipped, feedback, onFlip, onAnswer]);
+    const ratingOptions = [
+        { key: 'again', label: 'Again', hint: '1', classes: 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100' },
+        { key: 'hard', label: 'Hard', hint: '2', classes: 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' },
+        { key: 'good', label: 'Good', hint: '3', classes: 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100' },
+        { key: 'easy', label: 'Easy', hint: '4', classes: 'border-sky-300 text-sky-700 bg-sky-50 hover:bg-sky-100' }
+    ];
 
     // Collect values already shown (reading and meaning)
     const shownValues = new Set();
@@ -65,8 +50,7 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                         className={cn(
                             "relative w-full rounded-3xl bg-card border border-border/60 p-6 shadow-sm",
                             !isFlipped && "cursor-pointer",
-                            feedback === 'correct' && "border-emerald-400/70 shadow-[0_10px_40px_-20px_rgba(16,185,129,0.6)]",
-                            feedback === 'incorrect' && "border-red-400/70 shadow-[0_10px_40px_-20px_rgba(248,113,113,0.6)]"
+                            feedback && feedbackStyles[feedback]
                         )}
                         onClick={() => !isFlipped && !feedback && onFlip()}
                     >
@@ -126,21 +110,22 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
 
             {isFlipped && !feedback && (
                 <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border p-4">
-                    <div className="flex items-center justify-center gap-4">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAnswer(false); }}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                            <span className="font-medium">Again</span>
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAnswer(true); }}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                        >
-                            <Check className="w-4 h-4" />
-                            <span className="font-medium">Got it</span>
-                        </button>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {ratingOptions.map(option => (
+                            <button
+                                key={option.key}
+                                onClick={(e) => { e.stopPropagation(); onAnswer(option.key); }}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-colors text-sm font-semibold",
+                                    option.classes
+                                )}
+                            >
+                                <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full bg-white/70 border border-current">
+                                    {option.hint}
+                                </span>
+                                <span>{option.label}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}

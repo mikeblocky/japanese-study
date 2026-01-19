@@ -9,13 +9,20 @@ export function useProgress() {
     const [topicProgress, setTopicProgress] = useState({});
 
 
-    const recordProgress = useCallback(async (studyItemId, correct, harshMode = false) => {
+    const recordProgress = useCallback(async (studyItemId, ratingOrCorrect, harshMode = false) => {
+        const payload = {
+            studyItemId,
+            harshMode
+        };
+
+        if (typeof ratingOrCorrect === 'string') {
+            payload.rating = ratingOrCorrect.toUpperCase();
+        } else if (typeof ratingOrCorrect === 'boolean') {
+            payload.correct = ratingOrCorrect;
+        }
+
         try {
-            const response = await api.post('/progress/record', {
-                studyItemId,
-                correct,
-                harshMode
-            });
+            const response = await api.post('/progress/record', payload);
             return response.data;
         } catch (err) {
             console.error('Failed to record progress:', err);

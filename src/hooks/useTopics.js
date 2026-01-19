@@ -76,6 +76,20 @@ export function useTopics(courseId = null) {
         }
     };
 
+    const reorderTopicsAlphabetically = async (cId = courseId) => {
+        if (!cId) {
+            return { success: false, error: 'No course ID provided' };
+        }
+        try {
+            const res = await api.post(`/courses/${cId}/topics/reorder`);
+            await loadTopics(cId);
+            return { success: true, data: res.data };
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || 'Failed to reorder lessons';
+            return { success: false, error: errorMsg };
+        }
+    };
+
     return {
         topics,
         loading,
@@ -84,6 +98,7 @@ export function useTopics(courseId = null) {
         addTopic,
         updateTopic,
         deleteTopic,
-        addItemToTopic
+        addItemToTopic,
+        reorderTopicsAlphabetically
     };
 }

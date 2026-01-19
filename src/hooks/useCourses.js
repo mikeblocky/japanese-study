@@ -90,6 +90,16 @@ export function useCourses(autoLoad = true) {
         }
     };
 
+    const getCourseSummary = useCallback(async (id) => {
+        try {
+            const res = await api.get(`/courses/${id}/summary`);
+            return { success: true, data: res.data };
+        } catch (err) {
+            const errorMsg = err.response?.data?.message || 'Failed to load course summary';
+            return { success: false, error: errorMsg };
+        }
+    }, []);
+
     return {
         courses,
         loading,
@@ -98,6 +108,7 @@ export function useCourses(autoLoad = true) {
         addCourse,
         updateCourse,
         deleteCourse,
-        getCourseById
+        getCourseById,
+        getCourseSummary
     };
 }

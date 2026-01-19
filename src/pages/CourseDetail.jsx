@@ -152,20 +152,20 @@ export default function CourseDetail() {
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold tracking-widest uppercase mb-4">
                         Study path
                     </div>
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-3 flex-1">
-                            <h1 className="text-5xl sm:text-6xl font-serif text-primary leading-tight">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3 flex-1 min-w-0 max-w-4xl pr-2">
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif text-primary leading-tight break-words line-clamp-2" title={course?.title}>
                                 {course?.title || `Course ${courseId}`}
                             </h1>
-                            <p className="text-xl text-muted-foreground font-serif leading-relaxed italic border-l-4 border-primary/20 pl-4">
+                            <p className="text-xl text-muted-foreground font-serif leading-relaxed italic border-l-4 border-primary/20 pl-4 break-words">
                                 {course?.description || 'A structured path to mastery.'}
                             </p>
-                            <div className="flex items-center gap-3 text-base text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-3 text-base text-muted-foreground">
                                 <Target className="h-5 w-5" />
                                 {course?.category || 'Mixed focus'} · {course?.minLevel || 'N/A'} to {course?.maxLevel || 'N/A'}
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 sm:w-[380px]">
+                        <div className="grid grid-cols-2 gap-4 min-w-[240px] sm:min-w-[300px] max-w-sm">
                             <StatTile icon={BookOpen} label="Lessons" value={totals.lessons} />
                             <StatTile icon={Circle} label="Items" value={totals.items} />
                         </div>
