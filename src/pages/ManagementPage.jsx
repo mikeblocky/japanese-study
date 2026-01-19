@@ -14,8 +14,8 @@ export default function ManagementPage() {
     const tabs = [
         { id: 'courses', label: 'Courses', icon: BookOpen, component: CoursesTab },
         { id: 'lessons', label: 'Lessons', icon: List, component: LessonsTab },
-        { id: 'vocabulary', label: 'Vocabulary', icon: FileText, component: VocabularyTab },
-        { id: 'import', label: 'Import', icon: Upload, component: ImportTab },
+        { id: 'vocabulary', label: 'Words', icon: FileText, component: VocabularyTab },
+        { id: 'import', label: 'Import decks', icon: Upload, component: ImportTab },
     ];
 
     const ActiveComponent = tabs.find(t => t.id === activeTab)?.component;
@@ -23,8 +23,8 @@ export default function ManagementPage() {
     return (
         <PageShell>
             <PageHeader
-                title="Management"
-                description="Courses, lessons, vocabulary, and imports in one place."
+                title="Workspace"
+                description="Create courses, add lessons, manage words, and import decks in one place."
             />
 
             <div className="mb-6 overflow-x-auto">

@@ -47,8 +47,8 @@ export default function CourseList() {
             <div className="relative">
                 <div className="absolute -left-10 top-0 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
                 <PageHeader
-                    title={<span className="font-serif italic text-4xl">The Collection</span>}
-                    description="Structured paths for your journey."
+                    title={<span className="font-serif italic text-4xl">Your library</span>}
+                    description="Browse courses you've created or imported."
                 />
             </div>
 
@@ -75,7 +75,7 @@ export default function CourseList() {
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <Badge variant="outline" className="border-border/80 bg-muted/40">
                                         <BookOpen className="h-3 w-3 mr-1" />
-                                        {course.topics?.length || 0} topics
+                                        {course.topics?.length || 0} lessons
                                     </Badge>
                                     {course.category && (
                                         <Badge variant="secondary" className="bg-secondary/40 text-foreground/80">{course.category}</Badge>
@@ -110,7 +110,7 @@ export default function CourseList() {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 text-primary font-medium opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-                                    Start <ArrowRight className="h-4 w-4" />
+                                    Open course <ArrowRight className="h-4 w-4" />
                                 </div>
                             </CardContent>
                         </Card>

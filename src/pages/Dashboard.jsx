@@ -35,11 +35,13 @@ export default function Dashboard() {
 
     const greeting = () => {
         const hour = new Date().getHours();
-        if (hour < 5) return 'The early quiet.';
-        if (hour < 12) return 'Good morning.';
-        if (hour < 18) return 'Good afternoon.';
-        return 'The evening calm.';
+        if (hour < 5) return 'You are up early';
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
     };
+
+    const displayName = user?.username || user?.displayName || 'there';
 
     return (
         <PageShell className="pb-20">
@@ -47,8 +49,8 @@ export default function Dashboard() {
             <div className="relative mb-10 py-8 px-6 sm:px-10 border-b border-border/40">
                 <div className="max-w-3xl">
                     <h1 className="text-4xl sm:text-5xl font-serif text-primary mb-6 leading-tight">
-                        {greeting()} <br />
-                        <span className="text-muted-foreground opacity-60 italic text-2xl sm:text-3xl">Ready for today's session, {user?.username}?</span>
+                        {greeting()}, {displayName}.<br />
+                        <span className="text-muted-foreground opacity-70 italic text-2xl sm:text-3xl">Let's get a little better today.</span>
                     </h1>
 
                     <div className="bg-secondary/30 p-6 rounded-xl border border-secondary relative overflow-hidden">
@@ -59,32 +61,19 @@ export default function Dashboard() {
                         <p className="text-sm text-primary/60 font-medium relative z-10">— {quote.author}</p>
                     </div>
 
-                    <div className="mt-8 flex gap-4">
+                    <div className="mt-8 flex gap-4 flex-wrap">
                         <Button asChild className="rounded-full px-8 bg-primary text-primary-foreground hover:opacity-90 font-medium h-12">
-                            <Link to="/courses">Resume studies</Link>
+                            <Link to="/courses">Continue learning</Link>
                         </Button>
                         <Button asChild variant="outline" className="rounded-full px-6 h-12 border-red-500/20 text-red-600 hover:bg-red-500/5 hover:text-red-700">
                             <Link to="/study/challenge" className="flex items-center gap-2">
-                                <Zap className="h-4 w-4 fill-current" /> Challenge
+                                <Zap className="h-4 w-4 fill-current" /> Quick review
                             </Link>
                         </Button>
                         <Button asChild variant="outline" className="rounded-full px-6 h-12 border-primary/20 hover:bg-primary/5">
-                            <Link to="/management">View stats</Link>
+                            <Link to="/management">Open workspace</Link>
                         </Button>
                     </div>
-                </div>
-            </div>
-
-            {/* Stats Overview */}
-            <div className="px-6 sm:px-10 mb-12">
-                <div className="max-w-xs">
-                    <StatsCard
-                        label="Total Items Studied"
-                        value={stats?.totalItemsStudied}
-                        icon={BookOpen}
-                        color="blue"
-                        loading={statsLoading}
-                    />
                 </div>
             </div>
 
@@ -92,10 +81,10 @@ export default function Dashboard() {
                 {/* Course List - Main Content */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold tracking-tight">Current Courses</h2>
+                        <h2 className="text-2xl font-bold tracking-tight">Your courses</h2>
                         <Button asChild variant="ghost" className="text-muted-foreground hover:text-primary">
                             <Link to="/courses" className="flex items-center gap-1">
-                                View Library <ArrowRight className="h-4 w-4" />
+                                Browse courses <ArrowRight className="h-4 w-4" />
                             </Link>
                         </Button>
                     </div>
@@ -118,18 +107,26 @@ export default function Dashboard() {
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
+                <div className="space-y-4">
+                    <StatsCard
+                        label="Items studied"
+                        value={stats?.totalItemsStudied}
+                        icon={BookOpen}
+                        color="blue"
+                        loading={statsLoading}
+                    />
+
                     {/* Quick Actions / Import Upsell */}
                     <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
                         <div className="flex items-center gap-3 mb-3 text-primary">
                             <Lightbulb className="h-5 w-5" />
-                            <h3 className="font-bold text-lg">Expand your library</h3>
+                            <h3 className="font-bold text-lg">Bring your decks</h3>
                         </div>
                         <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                            Have existing Anki decks? Import them to keep all your progress in one place.
+                            Import Anki decks so everything you study lives in one place.
                         </p>
                         <Button asChild variant="outline" className="w-full bg-background/50 hover:bg-background border-primary/20">
-                            <Link to="/management?tab=import">Import Deck</Link>
+                            <Link to="/management?tab=import">Import a deck</Link>
                         </Button>
                     </div>
                 </div>
@@ -194,13 +191,13 @@ function EmptyState() {
                 <BookOpen className="h-5 w-5 text-primary/60" />
             </div>
             <div className="max-w-xs mx-auto">
-                <h3 className="text-lg font-serif text-foreground mb-1">Start your journey</h3>
+                <h3 className="text-lg font-serif text-foreground mb-1">You don't have any courses yet</h3>
                 <p className="text-sm text-muted-foreground">
                     Create a course or import a deck to begin learning.
                 </p>
             </div>
             <Button asChild size="sm" className="rounded-full">
-                <Link to="/management">Create Course</Link>
+                <Link to="/management">Create a course</Link>
             </Button>
         </div>
     );

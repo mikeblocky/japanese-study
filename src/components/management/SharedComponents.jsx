@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select as UiSelect,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 
 /**
  * Reusable form card wrapper with header and close button.
@@ -97,18 +104,30 @@ export function FormField({ label, id, children, required = false }) {
  * Select dropdown styled consistently.
  */
 export function Select({ value, onChange, options, placeholder, disabled = false, className = '' }) {
+    const EMPTY_VALUE = '__empty__';
+    const normalizedValue = value === '' ? EMPTY_VALUE : value;
+
+    const handleChange = (next) => {
+        if (next === EMPTY_VALUE) onChange('');
+        else onChange(next);
+    };
+
     return (
-        <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={disabled}
-            className={`w-full h-10 px-3 rounded-md border border-input bg-background disabled:opacity-50 ${className}`}
-        >
-            <option value="">{placeholder}</option>
-            {options.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-        </select>
+        <UiSelect value={normalizedValue} onValueChange={handleChange} disabled={disabled}>
+            <SelectTrigger className={className}>
+                <SelectValue placeholder={placeholder || 'Select an option'} />
+            </SelectTrigger>
+            <SelectContent>
+                {options.map(opt => {
+                    const itemValue = opt.value === '' ? EMPTY_VALUE : opt.value;
+                    return (
+                        <SelectItem key={opt.value || 'empty'} value={itemValue}>
+                            {opt.label}
+                        </SelectItem>
+                    );
+                })}
+            </SelectContent>
+        </UiSelect>
     );
 }
 

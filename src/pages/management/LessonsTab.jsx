@@ -118,7 +118,7 @@ export default function LessonsTab() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-xl font-semibold">Lesson Management</h2>
+                    <h2 className="text-xl font-semibold">Lesson management</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                         Pick a course on the left, then add or edit lessons inline.
                     </p>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Upload, CheckCircle, AlertCircle, FileText, Info } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, FileText, Info, Shield } from 'lucide-react';
 import api from '@/lib/api';
 import { useCourses } from '@/hooks/useCourses';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Select, PageHeader, FormField } from '@/components/management/SharedComponents';
 
 export default function ImportTab() {
     const [ankiFile, setAnkiFile] = useState(null);
@@ -92,7 +93,8 @@ export default function ImportTab() {
             });
 
             setAnkiFile(null);
-            document.getElementById('anki-file').value = '';
+            const input = document.getElementById('anki-file');
+            if (input) input.value = '';
             loadCourses(); // Refresh courses
             toast.success('Import successful!');
         } catch (err) {
@@ -138,94 +140,161 @@ export default function ImportTab() {
     };
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
-            <div>
-                <h2 className="text-2xl font-bold tracking-tight">Import Content</h2>
-                <p className="text-muted-foreground mt-1">
-                    Upload your Anki decks (.apkg) to automatically create courses, lessons, and vocabulary.
-                </p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Deck import"
+                subtitle="Upload an Anki .apkg to generate courses, lessons, and vocabulary automatically."
+            />
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Upload className="h-5 w-5" />
-                            Upload Deck
-                        </CardTitle>
-                        <CardDescription>
-                            Select an .apkg file (Max 200MB)
-                        </CardDescription>
+            <div className="grid gap-6 xl:grid-cols-[440px_1fr]">
+                <Card className="h-fit border-primary/40">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Upload deck</CardTitle>
+                        <CardDescription>Select an .apkg file (max 200MB). Keep this tab open while it processes.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex flex-col gap-6">
-                            <div className="flex flex-col items-center justify-center p-6 bg-muted/10 rounded-xl border border-muted/20">
-                                <input
-                                    id="anki-file"
-                                    type="file"
-                                    accept=".apkg"
-                                    onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
-                                    disabled={importing}
-                                    className="hidden"
-                                />
-                                <label
-                                    htmlFor="anki-file"
-                                    className={`flex flex-col items-center gap-2 cursor-pointer text-center ${importing ? 'opacity-50 pointer-events-none' : ''}`}
-                                >
-                                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                                        <FileText className="h-6 w-6 text-primary" />
-                                    </div>
-                                    {ankiFile ? (
-                                        <div className="space-y-1">
-                                            <p className="font-medium text-foreground">{ankiFile.name}</p>
-                                            <p className="text-xs text-muted-foreground">{(ankiFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-1">
-                                            <p className="font-medium text-foreground">Click to browse</p>
-                                            <p className="text-xs text-muted-foreground">or drag and drop here</p>
-                                        </div>
-                                    )}
-                                </label>
-                            </div>
-
-                            {progress && (
-                                <div className="space-y-1">
-                                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                                        <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{progress}</p>
+                    <CardContent className="space-y-5">
+                        <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors bg-muted/10">
+                            <input
+                                id="anki-file"
+                                type="file"
+                                accept=".apkg"
+                                onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
+                                disabled={importing}
+                                className="hidden"
+                            />
+                            <label
+                                htmlFor="anki-file"
+                                className={`flex flex-col items-center justify-center px-6 py-8 text-center cursor-pointer ${importing ? 'opacity-60 pointer-events-none' : ''}`}
+                            >
+                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                                    <FileText className="h-6 w-6 text-primary" />
                                 </div>
-                            )}
+                                {ankiFile ? (
+                                    <div className="space-y-1">
+                                        <p className="font-medium text-foreground">{ankiFile.name}</p>
+                                        <p className="text-xs text-muted-foreground">{(ankiFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        <p className="font-medium text-foreground">Click to browse</p>
+                                        <p className="text-xs text-muted-foreground">or drag and drop here</p>
+                                    </div>
+                                )}
+                            </label>
+                        </div>
 
-                            <div className="flex items-center gap-2 text-sm">
-                                <input
-                                    type="checkbox"
-                                    checked={includeMedia}
-                                    onChange={(e) => setIncludeMedia(e.target.checked)}
-                                    disabled={importing}
-                                    className="w-4 h-4 accent-primary"
-                                    id="include-media"
-                                />
-                                <label htmlFor="include-media" className="text-sm text-foreground">
-                                    Include media (images, audio)
-                                </label>
+                        {progress && (
+                            <div className="space-y-1">
+                                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                                    <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
+                                </div>
+                                <p className="text-xs text-muted-foreground">{progress}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground -mt-1">Adds size; needed for audio/images to load.</p>
+                        )}
 
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <FormField label="Include media" id="include-media">
+                                <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-background">
+                                    <div className="text-sm text-muted-foreground">Images & audio (slower)</div>
+                                    <Switch
+                                        id="include-media"
+                                        checked={includeMedia}
+                                        onCheckedChange={setIncludeMedia}
+                                        disabled={importing}
+                                    />
+                                </div>
+                            </FormField>
+                            <FormField label="Visibility" id="visibility">
+                                <Select
+                                    value={visibility}
+                                    onChange={setVisibility}
+                                    options={[
+                                        { value: 'PRIVATE', label: 'Private (only you)' },
+                                        { value: 'PUBLIC', label: 'Public' },
+                                    ]}
+                                    placeholder="Choose visibility"
+                                    disabled={importing}
+                                />
+                            </FormField>
+                        </div>
+
+                        <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                                <Shield className="h-3.5 w-3.5" />
+                                Decks stay private by default; flip to Public if you want to share.
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Info className="h-3.5 w-3.5" />
+                                Media adds size but is required for audio/images.
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <Button
                                 onClick={handleImport}
                                 disabled={!ankiFile || importing}
-                                className="w-full"
+                                className="flex-1"
                                 size="lg"
                             >
-                                {importing ? 'Importing...' : 'Start Import'}
+                                {importing ? 'Importing...' : 'Start import'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setAnkiFile(null);
+                                    const input = document.getElementById('anki-file');
+                                    if (input) input.value = '';
+                                }}
+                                disabled={importing}
+                                className="sm:w-32"
+                            >
+                                Clear
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
 
                 <div className="space-y-4">
+                    {result && (
+                        <Card className={`border ${result.success ? 'border-green-500/20 bg-green-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    {result.success ? (
+                                        <CheckCircle className="h-6 w-6 text-green-500" />
+                                    ) : (
+                                        <AlertCircle className="h-6 w-6 text-red-500" />
+                                    )}
+                                    <div>
+                                        <CardTitle className={result.success ? 'text-green-600' : 'text-red-600'}>
+                                            {result.success ? 'Import complete' : 'Import failed'}
+                                        </CardTitle>
+                                        <CardDescription className="font-mono text-xs mt-1">
+                                            {result.technicalDetails}
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+
+                            {result.success && result.details && (
+                                <CardContent>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        <StatBox label="Courses" value={result.details.courses} color="text-blue-500" />
+                                        <StatBox label="Lessons" value={result.details.lessons} color="text-purple-500" />
+                                        <StatBox label="Words" value={result.details.words} color="text-emerald-500" />
+                                        <StatBox label="Skipped" value={result.details.skipped} color="text-orange-500" />
+                                    </div>
+                                    <p className="mt-4 text-sm text-center text-muted-foreground">{result.message}</p>
+                                </CardContent>
+                            )}
+
+                            {!result.success && (
+                                <CardContent>
+                                    <p className="text-sm text-red-600/90 dark:text-red-400/90">{result.message}</p>
+                                </CardContent>
+                            )}
+                        </Card>
+                    )}
+
                     <Card className="border border-amber-300/60 bg-amber-50/60">
                         <CardHeader className="pb-2">
                             <CardTitle className="flex items-center gap-2 text-amber-700 text-base">
@@ -234,7 +303,8 @@ export default function ImportTab() {
                         </CardHeader>
                         <CardContent className="text-sm text-amber-800 space-y-2">
                             <p>On Render, media stored on the local disk disappears after restart. Use a persistent disk or re-import with media each deploy.</p>
-                            <p className="text-xs text-amber-700/80">If you see 404s for /api/media files, re-import decks with "Include media" and ensure storage is persistent.</p>
+                            <p className="text-xs text-amber-700/90">If you imported without media, images/audio will not be visible or playable. If you imported with media and see 404s or missing playback after a restart, re-import the deck with media and ensure storage is persistent.</p>
+                            <p className="text-xs text-amber-700/90">Audio/video playback requires media to be included; text-only imports will show words but no media assets.</p>
                         </CardContent>
                     </Card>
 
@@ -262,46 +332,6 @@ export default function ImportTab() {
                     </Card>
                 </div>
             </div>
-
-            {result && (
-                <Card className={`border ${result.success ? 'border-green-500/20 bg-green-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            {result.success ? (
-                                <CheckCircle className="h-6 w-6 text-green-500" />
-                            ) : (
-                                <AlertCircle className="h-6 w-6 text-red-500" />
-                            )}
-                            <div>
-                                <CardTitle className={result.success ? 'text-green-600' : 'text-red-600'}>
-                                    {result.success ? 'Import Complete' : 'Import Failed'}
-                                </CardTitle>
-                                <CardDescription className="font-mono text-xs mt-1">
-                                    {result.technicalDetails}
-                                </CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-
-                    {result.success && result.details && (
-                        <CardContent>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <StatBox label="Courses" value={result.details.courses} color="text-blue-500" />
-                                <StatBox label="Lessons" value={result.details.lessons} color="text-purple-500" />
-                                <StatBox label="Words" value={result.details.words} color="text-emerald-500" />
-                                <StatBox label="Skipped" value={result.details.skipped} color="text-orange-500" />
-                            </div>
-                            <p className="mt-4 text-sm text-center text-muted-foreground">{result.message}</p>
-                        </CardContent>
-                    )}
-
-                    {!result.success && (
-                        <CardContent>
-                            <p className="text-sm text-red-600/90 dark:text-red-400/90">{result.message}</p>
-                        </CardContent>
-                    )}
-                </Card>
-            )}
         </div>
     );
 }

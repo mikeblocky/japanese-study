@@ -26,8 +26,7 @@ export default function Layout() {
     const navItems = [
         { label: 'Dashboard', path: '/', icon: Home },
         { label: 'Courses', path: '/courses', icon: BookOpen },
-
-        { label: 'Management', path: '/management', icon: Settings }, // Explicitly added Management/Manage back
+        { label: 'Workspace', path: '/management', icon: Settings },
     ];
 
     // Mobile Menu Portal
@@ -43,7 +42,7 @@ export default function Layout() {
                     <div className="fixed inset-y-0 left-0 w-[280px] z-50 md:hidden bg-background border-r p-4 flex flex-col shadow-2xl animate-in slide-in-from-left duration-300">
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-2">
-                                <span className="font-serif font-bold text-xl text-primary tracking-tight">Manage</span>
+                                <span className="font-serif font-bold text-xl text-primary tracking-tight">Workspace</span>
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
                                 <X className="h-5 w-5" />
@@ -143,7 +142,7 @@ export default function Layout() {
             >
                 <div className="h-14 flex items-center px-4 border-b border-border/50">
                     {!isCollapsed && (
-                        <span className="font-serif font-bold text-lg text-primary tracking-tight">Manage</span>
+                        <span className="font-serif font-bold text-lg text-primary tracking-tight">Workspace</span>
                     )}
                     <Button
                         variant="ghost"
@@ -159,7 +158,7 @@ export default function Layout() {
                 <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
                     {navItems.map((item) => {
                         const Icon = item.icon;
-                        const label = item.label === 'Management' ? 'Manage' : item.label;
+                        const label = item.label;
                         const isActive = location.pathname === item.path;
                         return (
                             <Link key={item.path} to={item.path} title={isCollapsed ? label : undefined}>
@@ -252,7 +251,7 @@ export default function Layout() {
                     <Button variant="ghost" size="icon" className="-ml-2" onClick={() => setIsMobileMenuOpen(true)}>
                         <Menu className="h-5 w-5" />
                     </Button>
-                    <span className="font-serif font-bold text-xl text-primary ml-2 tracking-tight">Manage</span>
+                    <span className="font-serif font-bold text-xl text-primary ml-2 tracking-tight">Workspace</span>
                 </header>
 
                 <main className="flex-1 px-4 sm:px-6 py-6 lg:px-8 max-w-7xl mx-auto w-full">
