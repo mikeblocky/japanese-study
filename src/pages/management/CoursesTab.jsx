@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, ShieldAlert, FolderOpen, Tag } from 'lucide-react';
+import { Plus, Trash2, ShieldAlert, FolderOpen, Tag, Filter } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, PageHeader } from '@/components/management/SharedComponents';
+import { Switch } from '@/components/ui/switch';
 
 const LEVEL_OPTIONS = [
     { value: '', label: 'Not specified' },
@@ -36,6 +37,10 @@ export default function CoursesTab() {
     const [editingId, setEditingId] = useState(null);
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(null);
+    const [filterText, setFilterText] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterLevel, setFilterLevel] = useState('');
+    const [showMineOnly, setShowMineOnly] = useState(false);
     const { user } = useAuth();
 
     const { courses, loading, addCourse, updateCourse, deleteCourse } = useCourses();
@@ -124,6 +129,23 @@ export default function CoursesTab() {
     const isOwner = selectedCourse ? (selectedCourse.ownerId == null || selectedCourse.ownerId === user?.uid) : true;
     const disableEdits = selectedCourse && !isOwner;
 
+    const filteredCourses = courses.filter(course => {
+        const matchesOwner = !showMineOnly || course.ownerId == null || course.ownerId === user?.uid;
+        const matchesText = !filterText ||
+            course.title?.toLowerCase().includes(filterText.toLowerCase()) ||
+            course.tags?.toLowerCase().includes(filterText.toLowerCase());
+        const matchesCategory = !filterCategory || course.category === filterCategory;
+        const matchesLevel = !filterLevel || course.minLevel === filterLevel || course.maxLevel === filterLevel;
+        return matchesOwner && matchesText && matchesCategory && matchesLevel;
+    });
+
+    const resetFilters = () => {
+        setFilterText('');
+        setFilterCategory('');
+        setFilterLevel('');
+        setShowMineOnly(false);
+    };
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -136,15 +158,52 @@ export default function CoursesTab() {
             />
             <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
                 <Card className="h-full">
-                    <CardHeader className="p-4 border-b">
-                        <CardTitle className="text-base">Courses</CardTitle>
+                    <CardHeader className="p-4 border-b space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <CardTitle className="text-base">Courses</CardTitle>
+                            <Badge variant="outline" className="text-[11px]">{filteredCourses.length} shown</Badge>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Filter className="h-4 w-4" />
+                                Quick filters
+                            </div>
+                            <div className="space-y-2">
+                                <Input
+                                    value={filterText}
+                                    onChange={(e) => setFilterText(e.target.value)}
+                                    placeholder="Search title or tags"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Select
+                                        value={filterCategory}
+                                        onChange={setFilterCategory}
+                                        options={CATEGORY_OPTIONS}
+                                        placeholder="Category"
+                                    />
+                                    <Select
+                                        value={filterLevel}
+                                        onChange={setFilterLevel}
+                                        options={LEVEL_OPTIONS}
+                                        placeholder="Level"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Switch checked={showMineOnly} onCheckedChange={setShowMineOnly} id="mine-only" />
+                                        <label htmlFor="mine-only" className="text-sm">Only my courses</label>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={resetFilters}>Clear</Button>
+                                </div>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                        {courses.length === 0 && !loading ? (
+                        {filteredCourses.length === 0 && !loading ? (
                             <div className="p-6 text-sm text-muted-foreground text-center">No courses yet. Create one to start.</div>
                         ) : (
                             <div className="divide-y">
-                                {courses.map(course => {
+                                {filteredCourses.map(course => {
                                     const active = selectedCourse?.id === course.id;
                                     const owner = course.ownerId == null || course.ownerId === user?.uid;
                                     return (

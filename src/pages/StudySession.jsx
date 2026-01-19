@@ -159,7 +159,7 @@ export default function StudySession() {
             if (nextQueue.length === 0) {
                 setIsFinished(true);
             }
-        }, 500);
+        }, 100);
     };
 
     // Loading
@@ -197,32 +197,30 @@ export default function StudySession() {
 
     // Finished - Report Card View
     if (isFinished) {
+        const total = stats.correct + stats.incorrect;
+        const accuracy = total ? Math.round((stats.correct / total) * 100) : 0;
+
         return (
-            <div className="max-w-3xl mx-auto py-10 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="text-center mb-10">
-                    <h2 className="text-3xl font-bold font-serif mb-2 flex items-center justify-center gap-3">
+            <div className="max-w-5xl mx-auto py-12 px-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-lg">
+                <div className="text-center mb-12 space-y-3">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold uppercase tracking-widest">
+                        {isChallenge ? 'Challenge complete' : 'Session complete'}
+                    </div>
+                    <h2 className="text-4xl font-bold font-serif flex items-center justify-center gap-3">
                         {isChallenge ? <Swords className="h-8 w-8 text-red-500" /> : <Trophy className="h-8 w-8 text-yellow-500" />}
-                        {isChallenge ? "Arena Conquered" : "Session Complete"}
+                        {isChallenge ? 'Arena Conquered' : 'Knowledge secured'}
                     </h2>
-                    <p className="text-muted-foreground">
-                        {isChallenge ? "You survived the harsh trials." : "Knowledge secured."}
-                    </p>
+                    <p className="text-muted-foreground text-lg">{isChallenge ? 'You survived the harsh trials.' : 'Great run. Keep your streak alive.'}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-center">
-                        <div className="text-3xl font-bold text-green-600">{stats.correct}</div>
-                        <div className="text-xs font-semibold uppercase tracking-wider text-green-600/70">Correct</div>
-                    </div>
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
-                        <div className="text-3xl font-bold text-red-600">{stats.incorrect}</div>
-                        <div className="text-xs font-semibold uppercase tracking-wider text-red-600/70">Incorrect</div>
-                    </div>
+                <div className="grid gap-5 sm:grid-cols-3 mb-12">
+                    <SummaryCard label="Correct" value={stats.correct} tone="success" />
+                    <SummaryCard label="Incorrect" value={stats.incorrect} tone="danger" />
+                    <SummaryCard label="Accuracy" value={`${accuracy}%`} tone="neutral" />
                 </div>
 
-                {/* Detailed Report Card */}
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b bg-muted/40 font-medium text-sm flex justify-between items-center">
+                    <div className="px-7 py-5 border-b bg-muted/40 font-medium text-base flex justify-between items-center">
                         <span>Battle Log</span>
                         <span className="text-xs text-muted-foreground uppercase tracking-widest">SRS Delta</span>
                     </div>
@@ -233,38 +231,32 @@ export default function StudySession() {
                             const isGain = delta > 0;
 
                             return (
-                                <div key={idx} className="px-6 py-4 flex items-center justify-between hover:bg-muted/20 transition-colors">
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <div className="flex items-center gap-3">
-                                            <span className={cn(
-                                                "w-2 h-2 rounded-full shrink-0",
-                                                record.correct ? "bg-green-500" : "bg-red-500"
-                                            )} />
-                                            <div className="font-medium truncate text-base">
+                                <div key={idx} className="px-7 py-4 grid grid-cols-[1fr_auto_auto] items-center gap-4 hover:bg-muted/20 transition-colors text-base">
+                                    <div className="flex items-start gap-3 min-w-0">
+                                        <span className={cn(
+                                            "mt-1 w-2 h-2 rounded-full shrink-0",
+                                            record.correct ? "bg-green-500" : "bg-red-500"
+                                        )} />
+                                        <div className="min-w-0">
+                                            <div className="font-semibold truncate text-lg">
                                                 {record.item.primaryText}
                                             </div>
-                                        </div>
-                                        <div className="text-sm text-muted-foreground pl-5 truncate">
-                                            {record.item.secondaryText}
+                                            <div className="text-sm text-muted-foreground truncate">
+                                                {record.item.secondaryText}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4 shrink-0 font-mono text-sm">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs text-muted-foreground line-through opacity-50">
-                                                Lv.{record.oldInterval}
-                                            </span>
-                                            <span className="font-bold">
-                                                Lv.{record.newInterval}
-                                            </span>
-                                        </div>
-                                        <div className={cn(
-                                            "w-12 text-right font-bold",
-                                            isLoss ? "text-red-500" : (isGain ? "text-green-500" : "text-muted-foreground")
-                                        )}>
-                                            {isLoss ? '↓' : (isGain ? '↑' : '=')}
-                                            {Math.abs(delta)}
-                                        </div>
+                                    <div className="text-right font-mono text-sm text-muted-foreground">
+                                        <div className="line-through opacity-50">Lv.{record.oldInterval}</div>
+                                        <div className="font-bold text-foreground text-base">Lv.{record.newInterval}</div>
+                                    </div>
+
+                                    <div className={cn(
+                                        "text-right font-bold text-base",
+                                        isLoss ? "text-red-500" : (isGain ? "text-green-500" : "text-muted-foreground")
+                                    )}>
+                                        {isLoss ? '↓' : (isGain ? '↑' : '=')}{Math.abs(delta)}
                                     </div>
                                 </div>
                             );
@@ -272,12 +264,12 @@ export default function StudySession() {
                     </div>
                 </div>
 
-                <div className="flex gap-4 flex-wrap justify-center mt-10">
-                    <Link to="/courses" className="px-8 py-3 rounded-full border border-border hover:bg-secondary transition-colors font-medium">
+                <div className="flex gap-4 flex-wrap justify-center mt-12 text-base">
+                    <Link to="/courses" className="px-9 py-3.5 rounded-full border border-border hover:bg-secondary transition-colors font-semibold">
                         Return
                     </Link>
-                    <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 font-medium">
-                        Again
+                    <button onClick={() => window.location.reload()} className="px-9 py-3.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 font-semibold">
+                        Train again
                     </button>
                 </div>
             </div>
@@ -328,6 +320,22 @@ export default function StudySession() {
                     audioUrl={currentItem.audioUrl}
                     imageUrl={currentItem.imageUrl}
                 />
+            </div>
+        </div>
+    );
+}
+
+function SummaryCard({ label, value, tone = 'neutral' }) {
+    const toneClasses = {
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        danger: 'bg-red-50 border-red-200 text-red-700',
+        neutral: 'bg-muted/60 border-border text-foreground'
+    };
+
+    return (
+        <div className={`p-5 rounded-2xl border text-center shadow-sm ${toneClasses[tone]}`}>
+            <div className="text-4xl font-bold">{value}</div>
+            <div className="text-sm font-semibold uppercase tracking-wider mt-2">{label}
             </div>
         </div>
     );

@@ -137,7 +137,7 @@ export default function Layout() {
             <aside
                 className={cn(
                     "hidden md:flex flex-col border-r border-border/50 bg-background h-screen sticky top-0 transition-all duration-300 ease-in-out z-30",
-                    isCollapsed ? "w-[68px]" : "w-[230px]"
+                    isCollapsed ? "w-[80px]" : "w-[260px]"
                 )}
             >
                 <div className="h-14 flex items-center px-4 border-b border-border/50">
@@ -165,14 +165,14 @@ export default function Layout() {
                                 <div
                                     data-active={isActive}
                                     className={cn(
-                                        buttonVariants({ variant: 'ghost', size: 'sm' }),
-                                        "w-full justify-start gap-3 text-sm px-3",
-                                        isCollapsed && "justify-center px-2",
+                                        buttonVariants({ variant: 'ghost', size: 'lg' }),
+                                        "w-full justify-start gap-3 text-base px-4 h-12",
+                                        isCollapsed && "justify-center px-2 gap-0",
                                         "data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:border data-[active=true]:border-primary/30"
                                     )}
                                 >
-                                    <Icon className={cn("h-4 w-4", isActive && "text-primary")} />
-                                    {!isCollapsed && <span>{label}</span>}
+                                    <Icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                                    {!isCollapsed && <span className="font-medium">{label}</span>}
                                 </div>
                             </Link>
                         );
