@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
-    BookOpen, Home, Settings,
+    BookOpen, Home, Settings, Clock4,
     PanelLeftClose, PanelLeftOpen, Menu, X,
     LogOut, User as UserIcon, Moon, Sun
 } from 'lucide-react';
@@ -26,6 +26,7 @@ export default function Layout() {
     const navItems = [
         { label: 'Dashboard', path: '/', icon: Home },
         { label: 'Courses', path: '/courses', icon: BookOpen },
+        { label: 'SRS Review', path: '/srs', icon: Clock4 },
         { label: 'Workspace', path: '/management', icon: Settings },
     ];
 

@@ -9,6 +9,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CourseList = lazy(() => import('./pages/CourseList'));
 const CourseDetail = lazy(() => import('./pages/CourseDetail'));
 const StudySession = lazy(() => import('./pages/StudySession'));
+const SrsPage = lazy(() => import('./pages/SrsPage'));
 
 
 const ManagementPage = lazy(() => import('./pages/ManagementPage'));
@@ -47,6 +48,7 @@ function App() {
                     <Route path="courses/:courseId" element={<CourseDetail />} />
                     <Route path="study/:topicId" element={<StudySession />} />
                     <Route path="study" element={<Navigate to="/courses" replace />} />
+                    <Route path="srs" element={<SrsPage />} />
 
                     <Route path="management" element={<ManagementPage />} />
                   </Route>
