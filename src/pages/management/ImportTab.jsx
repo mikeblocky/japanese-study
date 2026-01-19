@@ -158,105 +158,109 @@ export default function ImportTab() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex flex-col items-center justify-center p-6 bg-muted/10 rounded-lg border border-muted/20">
-                            <input
-                                id="anki-file"
-                                type="file"
-                                accept=".apkg"
-                                onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
-                                disabled={importing}
-                                className="hidden"
-                            />
-                            <label
-                                htmlFor="anki-file"
-                                className={`flex flex-col items-center gap-2 cursor-pointer text-center ${importing ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                                    <FileText className="h-6 w-6 text-primary" />
-                                </div>
-                                {ankiFile ? (
-                                    <div className="space-y-1">
-                                        <p className="font-medium text-foreground">{ankiFile.name}</p>
-                                        <p className="text-xs text-muted-foreground">{(ankiFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col items-center justify-center p-6 bg-muted/10 rounded-xl border border-muted/20">
+                                <input
+                                    id="anki-file"
+                                    type="file"
+                                    accept=".apkg"
+                                    onChange={(e) => setAnkiFile(e.target.files?.[0] || null)}
+                                    disabled={importing}
+                                    className="hidden"
+                                />
+                                <label
+                                    htmlFor="anki-file"
+                                    className={`flex flex-col items-center gap-2 cursor-pointer text-center ${importing ? 'opacity-50 pointer-events-none' : ''}`}
+                                >
+                                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                                        <FileText className="h-6 w-6 text-primary" />
                                     </div>
-                                ) : (
-                                    <div className="space-y-1">
-                                        <p className="font-medium text-foreground">Click to browse</p>
-                                        <p className="text-xs text-muted-foreground">or drag and drop here</p>
-                                    </div>
-                                )}
-                            </label>
-                        </div>
-
-                        {progress && (
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>Processing...</span>
-                                    <span>{progress.includes('%') ? progress.split('... ')[1] : ''}</span>
-                                </div>
-                                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-primary animate-pulse"
-                                        style={{ width: '100%' }} // Indeterminate for now unless backend sends exact %
-                                    />
-                                </div>
-                                <p className="text-xs text-center text-muted-foreground animate-pulse">{progress}</p>
+                                    {ankiFile ? (
+                                        <div className="space-y-1">
+                                            <p className="font-medium text-foreground">{ankiFile.name}</p>
+                                            <p className="text-xs text-muted-foreground">{(ankiFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <p className="font-medium text-foreground">Click to browse</p>
+                                            <p className="text-xs text-muted-foreground">or drag and drop here</p>
+                                        </div>
+                                    )}
+                                </label>
                             </div>
-                        )}
 
-                        {/* Include Media option */}
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={includeMedia}
-                                onChange={(e) => setIncludeMedia(e.target.checked)}
-                                disabled={importing}
-                                className="w-4 h-4 accent-primary"
-                            />
-                            <span className="text-sm">
-                                Include media (images, audio)
-                            </span>
-                        </label>
-                        <p className="text-xs text-muted-foreground -mt-2">
-                            Enabling media import may increase storage usage significantly
-                        </p>
+                            {progress && (
+                                <div className="space-y-1">
+                                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                                        <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{progress}</p>
+                                </div>
+                            )}
 
-                        <Button
-                            onClick={handleImport}
-                            disabled={!ankiFile || importing}
-                            className="w-full"
-                            size="lg"
-                        >
-                            {importing ? 'Importing...' : 'Start Import'}
-                        </Button>
-                    </CardContent>
-                </Card>
+                            <div className="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={includeMedia}
+                                    onChange={(e) => setIncludeMedia(e.target.checked)}
+                                    disabled={importing}
+                                    className="w-4 h-4 accent-primary"
+                                    id="include-media"
+                                />
+                                <label htmlFor="include-media" className="text-sm text-foreground">
+                                    Include media (images, audio)
+                                </label>
+                            </div>
+                            <p className="text-xs text-muted-foreground -mt-1">Adds size; needed for audio/images to load.</p>
 
-                <Card className="bg-secondary/20 border-none">
-                    <CardHeader>
-                        <div className="flex items-center gap-2 text-primary">
-                            <Info className="h-5 w-5" />
-                            <CardTitle className="text-lg">Export Guide</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                        <div className="space-y-2">
-                            <h4 className="font-medium text-foreground">Prepare your deck in Anki:</h4>
-                            <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground ml-1">
-                                <li>Open <strong>Anki Desktop</strong></li>
-                                <li>Click the gear icon next to your deck</li>
-                                <li>Select <strong>Export</strong></li>
-                                <li>Format: <strong>Anki Deck Package (*.apkg)</strong></li>
-                                <li>Uncheck <em>"Include scheduling information"</em></li>
-                                <li>Check <em>"Include media"</em> (images/audio supported)</li>
-                                <li>Click <strong>Export</strong> to save the file</li>
-                            </ol>
-                        </div>
-                        <div className="p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
-                            <strong>Note:</strong> Large decks with lots of media may take a few minutes to process. Please be patient.
+                            <Button
+                                onClick={handleImport}
+                                disabled={!ankiFile || importing}
+                                className="w-full"
+                                size="lg"
+                            >
+                                {importing ? 'Importing...' : 'Start Import'}
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                <div className="space-y-4">
+                    <Card className="border border-amber-300/60 bg-amber-50/60">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center gap-2 text-amber-700 text-base">
+                                <AlertCircle className="h-5 w-5" /> Media persistence warning
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm text-amber-800 space-y-2">
+                            <p>On Render, media stored on the local disk disappears after restart. Use a persistent disk or re-import with media each deploy.</p>
+                            <p className="text-xs text-amber-700/80">If you see 404s for /api/media files, re-import decks with "Include media" and ensure storage is persistent.</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-secondary/20 border-none">
+                        <CardHeader>
+                            <div className="flex items-center gap-2 text-primary">
+                                <Info className="h-5 w-5" />
+                                <CardTitle className="text-lg">Export guide</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
+                            <div className="space-y-1">
+                                <h4 className="font-medium text-foreground">From Anki Desktop:</h4>
+                                <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-1">
+                                    <li>Deck gear → Export</li>
+                                    <li>Format: Anki Deck Package (*.apkg)</li>
+                                    <li>Uncheck “Include scheduling information”</li>
+                                    <li>Check “Include media”</li>
+                                </ol>
+                            </div>
+                            <div className="p-3 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs">
+                                Large decks with media can take a few minutes; keep the tab open until done.
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {result && (

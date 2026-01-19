@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Check, X, Volume2, Play, Image as ImageIcon } from 'lucide-react';
+import { Check, X, Volume2, Play, Image as ImageIcon, Image, AudioLines } from 'lucide-react';
 import { AudioPlayer, MediaImage } from './MediaComponents';
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { API_URL } from '@/lib/api';
@@ -58,12 +58,12 @@ function InlineAudioPlayer({ filename, storedUrl }) {
                 onClick={handlePlay}
                 disabled={error}
                 className={cn(
-                    "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors",
+                    "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors",
                     error
-                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        ? "border-border text-muted-foreground cursor-not-allowed"
                         : playing
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground hover:bg-primary/20"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background hover:border-primary/50"
                 )}
             >
                 {playing ? <Volume2 className="h-3 w-3 animate-pulse" /> : <Play className="h-3 w-3" />}
@@ -251,78 +251,94 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
     const formatContent = (text) => {
         if (!text) return [];
         return String(text)
-            .split(/(?<![^\x00-\x7F])(?=[^\x00-\x7F]+(?:[（(][^)）]+[)）])?[:：])|\n|—(?=[^\s])/)
+            .split(/\n|—(?=[^\s])/)
             .map(s => s.trim())
             .filter(s => s.length > 0);
     };
 
     return (
         <div className="flex flex-col h-full">
-            {/* Scrollable card content */}
-            <div className="flex-1 overflow-y-auto pb-24 custom-scrollbar">
-                <div className="max-w-xl mx-auto p-4">
+            <div className="flex-1 overflow-y-auto pb-20 custom-scrollbar">
+                <div className="max-w-3xl mx-auto px-4 sm:px-6">
                     <div
                         className={cn(
-                            "w-full rounded-2xl bg-card border border-border p-6",
+                            "relative w-full rounded-3xl bg-card border border-border/60 p-6 shadow-sm",
                             !isFlipped && "cursor-pointer",
-                            feedback === 'correct' && "border-emerald-500",
-                            feedback === 'incorrect' && "border-red-500"
+                            feedback === 'correct' && "border-emerald-400/70 shadow-[0_10px_40px_-20px_rgba(16,185,129,0.6)]",
+                            feedback === 'incorrect' && "border-red-400/70 shadow-[0_10px_40px_-20px_rgba(248,113,113,0.6)]"
                         )}
                         onClick={() => !isFlipped && !feedback && onFlip()}
                     >
-                        {!isFlipped ? (
-                            <div className="text-center py-8">
-                                <span className="text-xs text-muted-foreground uppercase mb-4 block">Term</span>
-                                <h2 className="text-4xl font-bold">{displayContent.term}</h2>
-                                <p className="text-sm text-muted-foreground mt-6">Tap or press Space to reveal</p>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Term</span>
+                                <h2 className="text-4xl sm:text-5xl font-bold leading-tight">{displayContent.term}</h2>
                             </div>
+                            {(normalizedAudioUrl || normalizedImageUrl) && (
+                                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-2 text-xs text-muted-foreground">
+                                    {normalizedAudioUrl && <AudioLines className="h-4 w-4" />}
+                                    {normalizedImageUrl && <Image className="h-4 w-4" />}
+                                    <span className="hidden sm:inline">Media</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {!isFlipped ? (
+                            <p className="mt-6 text-sm text-muted-foreground">Tap or press Space to reveal</p>
                         ) : (
-                            <div className="space-y-4">
-                                {/* Show Reading first if available and different from term */}
+                            <div className="mt-8 space-y-5">
                                 {displayContent.reading && displayContent.reading !== displayContent.term && (
-                                    <div className="border-b border-border/50 pb-4">
-                                        <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Reading</div>
-                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.reading} mediaUrlMap={mediaUrlMap} /></div>
+                                    <div className="space-y-2">
+                                        <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground bg-secondary/30 px-2.5 py-1 rounded-full">Reading</span>
+                                        <div className="text-lg leading-relaxed"><RichContent text={displayContent.reading} mediaUrlMap={mediaUrlMap} /></div>
                                     </div>
                                 )}
-                                {/* Show Meaning only if different from Reading */}
+
                                 {displayContent.english && displayContent.english !== displayContent.reading && (
-                                    <div className="border-b border-border/50 pb-4">
-                                        <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">Meaning</div>
-                                        <div className="text-base leading-relaxed"><RichContent text={displayContent.english} mediaUrlMap={mediaUrlMap} /></div>
+                                    <div className="space-y-2">
+                                        <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground bg-secondary/30 px-2.5 py-1 rounded-full">Meaning</span>
+                                        <div className="text-lg leading-relaxed"><RichContent text={displayContent.english} mediaUrlMap={mediaUrlMap} /></div>
                                     </div>
                                 )}
-                                {/* Show additional fields (non-duplicate values only) */}
-                                {allFields.map(([key, value]) => {
-                                    const lines = formatContent(value);
-                                    return (
-                                        <div key={key} className="border-b border-border/50 pb-4 last:border-0">
-                                            <div className="text-xs text-muted-foreground uppercase mb-2 font-medium">{key}</div>
-                                            <div className="space-y-2">
-                                                {lines.map((line, i) => (
-                                                    <div key={i} className="text-base leading-relaxed">
-                                                        <RichContent text={line} mediaUrlMap={mediaUrlMap} />
+
+                                {allFields.length > 0 && (
+                                    <div className="space-y-3">
+                                        {allFields.map(([key, value]) => {
+                                            const lines = formatContent(value);
+                                            return (
+                                                <div key={key} className="space-y-1">
+                                                    <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground bg-secondary/20 px-2 py-1 rounded-full">{key}</span>
+                                                    <div className="space-y-1.5">
+                                                        {lines.map((line, i) => (
+                                                            <div key={i} className="text-base leading-relaxed">
+                                                                <RichContent text={line} mediaUrlMap={mediaUrlMap} />
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Audio player - show if there's audio */}
-                                {normalizedAudioUrl && (
-                                    <div className="flex justify-center pt-2">
-                                        <AudioPlayer src={normalizedAudioUrl} />
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
 
-                                {/* Image display - show if there's an image */}
-                                {normalizedImageUrl && (
-                                    <MediaImage src={normalizedImageUrl} alt={displayContent.term} />
+                                {(normalizedAudioUrl || normalizedImageUrl) && (
+                                    <div className="flex flex-wrap gap-3 pt-2">
+                                        {normalizedAudioUrl && (
+                                            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+                                                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                                                <AudioPlayer src={normalizedAudioUrl} />
+                                            </div>
+                                        )}
+                                        {normalizedImageUrl && (
+                                            <div className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+                                                <MediaImage src={normalizedImageUrl} alt={displayContent.term} />
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
 
                                 {allFields.length === 0 && !displayContent.reading && !displayContent.english && !normalizedAudioUrl && !normalizedImageUrl && (
-                                    <div className="text-center py-4 text-muted-foreground">No data</div>
+                                    <div className="text-sm text-muted-foreground">No content on this card.</div>
                                 )}
                             </div>
                         )}
@@ -330,25 +346,22 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                 </div>
             </div>
 
-            {/* Sticky bottom bar for answer buttons - inside content area */}
             {isFlipped && !feedback && (
-                <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border p-4 -mx-4 mt-4">
-                    <div className="flex items-center justify-center gap-6">
+                <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border p-4">
+                    <div className="flex items-center justify-center gap-4">
                         <button
                             onClick={(e) => { e.stopPropagation(); onAnswer(false); }}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                         >
                             <X className="w-4 h-4" />
-                            <span className="font-medium">I don't know</span>
-                            <kbd className="text-xs bg-red-500/20 px-1.5 py-0.5 rounded">←</kbd>
+                            <span className="font-medium">Again</span>
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onAnswer(true); }}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
                         >
                             <Check className="w-4 h-4" />
-                            <span className="font-medium">I know</span>
-                            <kbd className="text-xs bg-white/20 px-1.5 py-0.5 rounded">→</kbd>
+                            <span className="font-medium">Got it</span>
                         </button>
                     </div>
                 </div>

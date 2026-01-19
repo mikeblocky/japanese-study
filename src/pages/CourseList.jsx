@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowRight, BookOpen, Lock, Globe2 } from 'lucide-react';
 import api from '@/lib/api';
 import { useCourses } from '@/hooks/useCourses';
 import { PageShell, PageHeader } from '@/components/ui/page';
@@ -42,18 +42,6 @@ export default function CourseList() {
         return () => { cancelled = true; };
     }, [baseCourses]);
 
-    // Dynamic border color for personality
-    const getGradient = (index) => {
-        // Now just border colors for distinct, flat look
-        const colors = [
-            'border-orange-400',
-            'border-emerald-500',
-            'border-rose-400',
-            'border-amber-400',
-        ];
-        return colors[index % colors.length];
-    };
-
     return (
         <PageShell className="space-y-8 pb-20">
             <div className="relative">
@@ -79,55 +67,52 @@ export default function CourseList() {
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {courses.map((course, i) => (
-                    <Link key={course.id} to={`/courses/${course.id}`} className="block w-full group">
-                        <Card className={`h-full transition-all duration-300 hover:scale-[1.01] hover:shadow-md border-l-4 ${getGradient(i)} bg-card`}>
-                            <CardHeader className="relative overflow-hidden">
-                                <div className="flex items-center gap-2 flex-wrap mb-4">
-                                    {/* Level Badge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {courses.map((course) => (
+                    <Link key={course.id} to={`/courses/${course.id}`} className="group block">
+                        <Card className="h-full transition-all duration-200 hover:shadow-md border-border/60">
+                            <CardHeader className="space-y-3 pb-3">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Badge variant="outline" className="border-border/80 bg-muted/40">
+                                        <BookOpen className="h-3 w-3 mr-1" />
+                                        {course.topics?.length || 0} topics
+                                    </Badge>
+                                    {course.category && (
+                                        <Badge variant="secondary" className="bg-secondary/40 text-foreground/80">{course.category}</Badge>
+                                    )}
                                     {(course.minLevel || course.maxLevel || course.level) && (
-                                        <Badge variant="secondary" className="bg-secondary/50 border-none">
+                                        <Badge variant="outline" className="border-border/70 text-foreground/80">
                                             {course.minLevel && course.maxLevel
-                                                ? `${course.minLevel} - ${course.maxLevel}`
+                                                ? `${course.minLevel}–${course.maxLevel}`
                                                 : course.minLevel || course.maxLevel || course.level}
                                         </Badge>
                                     )}
-                                    {/* Category Badge */}
-                                    {course.category && (
-                                        <Badge variant="outline" className="bg-transparent border-primary/20 text-muted-foreground">
-                                            {course.category}
-                                        </Badge>
-                                    )}
-                                    {/* Topics Count */}
-                                    <Badge variant="outline" className="bg-transparent border-primary/10 text-muted-foreground">
-                                        <BookOpen className="h-3 w-3 mr-1" />
-                                        {course.topics?.length || 0} Topics
-                                    </Badge>
-                                    {course.visibility === 'PUBLIC' && course.ownerUsername && (
-                                        <Badge variant="outline" className="bg-transparent border-blue-400/30 text-blue-600 text-xs">
-                                            🌍 by {course.ownerUsername}
-                                        </Badge>
+                                    {course.visibility === 'PUBLIC' && (
+                                        <Badge variant="outline" className="border-blue-300/50 text-blue-600 bg-blue-50/50"><Globe2 className="h-3 w-3 mr-1" />Public</Badge>
                                     )}
                                     {course.visibility === 'PRIVATE' && (
-                                        <Badge variant="outline" className="bg-transparent border-orange-400/30 text-orange-600 text-xs">
-                                            🔒 Private
-                                        </Badge>
+                                        <Badge variant="outline" className="border-orange-300/50 text-orange-600 bg-orange-50/50"><Lock className="h-3 w-3 mr-1" />Private</Badge>
                                     )}
                                 </div>
 
-                                <h3 className="text-2xl font-bold tracking-tight mb-2 group-hover:text-primary transition-colors">
-                                    {course.title}
-                                </h3>
-
-                                <CardDescription className="text-muted-foreground leading-relaxed font-medium">
-                                    {course.description || "Comprehensive Japanese course covering vocabulary, grammar, and kanji reading practice."}
-                                </CardDescription>
-
-                                <div className="mt-6 flex items-center text-sm font-semibold text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                                    Start Learning <ArrowRight className="ml-2 h-4 w-4" />
+                                <div className="space-y-1">
+                                    <h3 className="text-xl font-semibold tracking-tight group-hover:text-primary transition-colors">{course.title}</h3>
+                                    <CardDescription className="text-sm leading-relaxed line-clamp-2">
+                                        {course.description || "Japanese vocab, grammar, and kanji practice."}
+                                    </CardDescription>
                                 </div>
                             </CardHeader>
+
+                            <CardContent className="flex items-center justify-between pt-1 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                    {course.ownerUsername && course.visibility === 'PUBLIC' && (
+                                        <span className="text-xs text-muted-foreground">by {course.ownerUsername}</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 text-primary font-medium opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                                    Start <ArrowRight className="h-4 w-4" />
+                                </div>
+                            </CardContent>
                         </Card>
                     </Link>
                 ))}

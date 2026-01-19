@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
-    BookOpen, Home, Search, Settings,
+    BookOpen, Home, Settings,
     PanelLeftClose, PanelLeftOpen, Menu, X,
     LogOut, User as UserIcon, Moon, Sun
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -137,78 +137,72 @@ export default function Layout() {
             {/* Desktop Sidebar */}
             <aside
                 className={cn(
-                    "hidden md:flex flex-col border-r bg-background h-screen sticky top-0 transition-all duration-300 ease-in-out z-30",
-                    isCollapsed ? "w-[60px]" : "w-[240px]"
+                    "hidden md:flex flex-col border-r border-border/50 bg-background h-screen sticky top-0 transition-all duration-300 ease-in-out z-30",
+                    isCollapsed ? "w-[68px]" : "w-[230px]"
                 )}
             >
-                <div className="h-14 flex items-center px-4 border-b border-border/40">
+                <div className="h-14 flex items-center px-4 border-b border-border/50">
                     {!isCollapsed && (
-                        <div className="flex items-center gap-2 ml-1">
-                            {/* Plain text 'Manage' as requested */}
-                            <span className="font-serif font-bold text-2xl text-primary tracking-tight">Manage</span>
-                        </div>
+                        <span className="font-serif font-bold text-lg text-primary tracking-tight">Manage</span>
                     )}
                     <Button
                         variant="ghost"
                         size="icon"
                         className={cn("ml-auto h-8 w-8 text-muted-foreground", isCollapsed && "mx-auto")}
                         onClick={() => setIsCollapsed(!isCollapsed)}
+                        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
                         {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                     </Button>
                 </div>
 
-                <nav className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const label = item.label === 'Management' ? 'Manage' : item.label;
                         const isActive = location.pathname === item.path;
                         return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                title={isCollapsed ? label : undefined}
-                                className={cn(
-                                    "flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-colors group relative", // Increased to py-3 and text-base
-                                    isActive
-                                        ? "bg-secondary text-primary font-bold"
-                                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                                    isCollapsed && "justify-center px-2"
-                                )}
-                            >
-                                <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-                                {!isCollapsed && <span>{label}</span>}
+                            <Link key={item.path} to={item.path} title={isCollapsed ? label : undefined}>
+                                <div
+                                    data-active={isActive}
+                                    className={cn(
+                                        buttonVariants({ variant: 'ghost', size: 'sm' }),
+                                        "w-full justify-start gap-3 text-sm px-3",
+                                        isCollapsed && "justify-center px-2",
+                                        "data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:border data-[active=true]:border-primary/30"
+                                    )}
+                                >
+                                    <Icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                                    {!isCollapsed && <span>{label}</span>}
+                                </div>
                             </Link>
                         );
                     })}
                 </nav>
 
-                {/* Theme Toggle */}
-                <div className="p-2 border-t border-border/40">
+                <div className="p-3 border-t border-border/40 space-y-2">
                     <Button
                         variant="ghost"
                         className={cn(
-                            "w-full justify-start gap-3 px-3",
+                            "w-full justify-start gap-3 px-3 text-sm",
                             isCollapsed && "justify-center px-2"
                         )}
                         onClick={toggleTheme}
                         title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                     >
                         {theme === 'dark' ? (
-                            <Sun className="h-5 w-5 shrink-0 text-amber-500" />
+                            <Sun className="h-4 w-4 shrink-0 text-amber-500" />
                         ) : (
-                            <Moon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                            <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />
                         )}
                         {!isCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
                     </Button>
-                </div>
 
-                <div className="p-2 border-t border-border/40 space-y-1">
                     {user ? (
                         <>
                             <div className={cn(
-                                "flex items-center gap-2 p-2 rounded-lg transition-colors",
-                                isCollapsed ? "justify-center" : "px-3"
+                                "flex items-center gap-2 px-2 py-2 rounded-lg",
+                                isCollapsed ? "justify-center" : ""
                             )}>
                                 <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
                                     <UserIcon className="h-4 w-4 text-muted-foreground" />
@@ -222,26 +216,26 @@ export default function Layout() {
                             <Button
                                 variant="ghost"
                                 className={cn(
-                                    "w-full justify-start gap-3 px-3",
+                                    "w-full justify-start gap-3 px-3 text-sm",
                                     isCollapsed && "justify-center px-2"
                                 )}
                                 onClick={logout}
                                 title="Sign out"
                             >
-                                <LogOut className="h-5 w-5 shrink-0 text-muted-foreground" />
+                                <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
                                 {!isCollapsed && <span>Sign out</span>}
                             </Button>
                         </>
                     ) : (
-                        <div className={cn("space-y-2", isCollapsed && "flex flex-col items-center space-y-2")}>
+                        <div className={cn("space-y-2", isCollapsed && "flex flex-col items-center space-y-2")}> 
                             <Link to="/login" className="w-full">
-                                <Button variant="outline" className={cn("w-full justify-start gap-3", isCollapsed && "justify-center px-0")}>
+                                <Button variant="outline" className={cn("w-full justify-start gap-3 text-sm", isCollapsed && "justify-center px-0")}> 
                                     <UserIcon className="h-4 w-4" />
                                     {!isCollapsed && "Log in"}
                                 </Button>
                             </Link>
                             <Link to="/signup" className="w-full">
-                                <Button className={cn("w-full justify-start gap-3", isCollapsed && "justify-center px-0")}>
+                                <Button className={cn("w-full justify-start gap-3 text-sm", isCollapsed && "justify-center px-0")}> 
                                     <UserIcon className="h-4 w-4" />
                                     {!isCollapsed && "Sign up"}
                                 </Button>
