@@ -2,6 +2,34 @@ import { cn } from '@/lib/utils';
 import { Check, X, Volume2, Play, Image as ImageIcon } from 'lucide-react';
 import { AudioPlayer, MediaImage } from './MediaComponents';
 import { useRef, useEffect, useState, useMemo } from 'react';
+import { API_URL } from '@/lib/api';
+
+// Normalize media URLs so they always point to the backend host (important in prod when
+// the frontend is on a different domain). Keeps existing relative `/api/media/...` values working.
+const API_ORIGIN = (() => {
+    try {
+        return new URL(API_URL).origin;
+    } catch (err) {
+        console.warn('Unable to resolve API origin for media URLs:', err);
+        return '';
+    }
+})();
+
+const normalizeMediaUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (!API_ORIGIN) return url;
+    return url.startsWith('/') ? `${API_ORIGIN}${url}` : `${API_ORIGIN}/${url}`;
+};
+
+const normalizeCsvUrls = (csv) => {
+    if (!csv) return '';
+    return csv
+        .split(',')
+        .map(part => normalizeMediaUrl(part.trim()))
+        .filter(Boolean)
+        .join(',');
+};
 
 // Mini audio player for inline audio references
 function InlineAudioPlayer({ filename, storedUrl }) {
@@ -10,7 +38,7 @@ function InlineAudioPlayer({ filename, storedUrl }) {
     const audioRef = useRef(null);
 
     // Use storedUrl if available, otherwise try the direct filename path
-    const audioSrc = storedUrl || `/api/media/${filename}`;
+    const audioSrc = normalizeMediaUrl(storedUrl || `/api/media/${filename}`);
 
     const handlePlay = () => {
         if (audioRef.current) {
@@ -58,7 +86,7 @@ function InlineImage({ filename, storedUrl }) {
     const [loaded, setLoaded] = useState(false);
 
     // Use storedUrl if available, otherwise try the direct filename path
-    const imageSrc = storedUrl || `/api/media/${filename}`;
+    const imageSrc = normalizeMediaUrl(storedUrl || `/api/media/${filename}`);
 
     if (error) {
         return (
@@ -184,31 +212,25 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
     // Build media URL map from stored audio/image URLs
     // The audioUrl/imageUrl contain stored paths like "/api/media/abc123_filename.mp3"
     // We need to map "filename.mp3" -> "/api/media/abc123_filename.mp3"
+    const normalizedAudioUrl = useMemo(() => normalizeCsvUrls(audioUrl), [audioUrl]);
+    const normalizedImageUrl = useMemo(() => normalizeCsvUrls(imageUrl), [imageUrl]);
+
     const mediaUrlMap = useMemo(() => {
         const map = {};
 
-        // Parse audioUrl (can be comma-separated)
-        if (audioUrl) {
-            audioUrl.split(',').forEach(url => {
-                const trimmedUrl = url.trim();
-                // Extract original filename from URL: /api/media/prefix_originalname.mp3 -> originalname.mp3
-                const match = trimmedUrl.match(/\/api\/media\/[^_]+_(.+)$/);
+        const addMappings = (value) => {
+            if (!value) return;
+            value.split(',').forEach(url => {
+                const normalizedUrl = normalizeMediaUrl(url.trim());
+                const match = normalizedUrl.match(/\/api\/media\/[^_]+_(.+)$/);
                 if (match) {
-                    map[match[1]] = trimmedUrl;
+                    map[match[1]] = normalizedUrl;
                 }
             });
-        }
+        };
 
-        // Parse imageUrl (can be comma-separated)
-        if (imageUrl) {
-            imageUrl.split(',').forEach(url => {
-                const trimmedUrl = url.trim();
-                const match = trimmedUrl.match(/\/api\/media\/[^_]+_(.+)$/);
-                if (match) {
-                    map[match[1]] = trimmedUrl;
-                }
-            });
-        }
+        addMappings(audioUrl);
+        addMappings(imageUrl);
 
         return map;
     }, [audioUrl, imageUrl]);
@@ -288,18 +310,18 @@ export default function FlashcardMode({ displayContent, additionalData = {}, isF
                                 })}
 
                                 {/* Audio player - show if there's audio */}
-                                {audioUrl && (
+                                {normalizedAudioUrl && (
                                     <div className="flex justify-center pt-2">
-                                        <AudioPlayer src={audioUrl} />
+                                        <AudioPlayer src={normalizedAudioUrl} />
                                     </div>
                                 )}
 
                                 {/* Image display - show if there's an image */}
-                                {imageUrl && (
-                                    <MediaImage src={imageUrl} alt={displayContent.term} />
+                                {normalizedImageUrl && (
+                                    <MediaImage src={normalizedImageUrl} alt={displayContent.term} />
                                 )}
 
-                                {allFields.length === 0 && !displayContent.reading && !displayContent.english && !audioUrl && !imageUrl && (
+                                {allFields.length === 0 && !displayContent.reading && !displayContent.english && !normalizedAudioUrl && !normalizedImageUrl && (
                                     <div className="text-center py-4 text-muted-foreground">No data</div>
                                 )}
                             </div>
