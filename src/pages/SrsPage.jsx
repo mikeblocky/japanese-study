@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock4, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Clock4, Loader2, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { PageShell, PageHeader } from '@/components/ui/page';
 
 export default function SrsPage() {
     const [items, setItems] = useState([]);
@@ -27,20 +27,26 @@ export default function SrsPage() {
         load();
     }, []);
 
-    const studiedCount = items.length;
-    const dueSoon = items.filter(i => i.nextReviewDate && new Date(i.nextReviewDate) <= new Date(Date.now() + 48 * 3600 * 1000)).length;
+    const { studiedCount, dueSoon } = useMemo(() => {
+        const studied = items.length;
+        const soon = items.filter(i => i.nextReviewDate && new Date(i.nextReviewDate) <= new Date(Date.now() + 48 * 3600 * 1000)).length;
+        return { studiedCount: studied, dueSoon: soon };
+    }, [items]);
 
     return (
-        <div className="space-y-6 pb-12">
-            <div className="flex items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-3xl font-semibold tracking-tight">SRS Library</h1>
-                    <p className="text-muted-foreground">All words you have studied, with their current intervals.</p>
+        <PageShell>
+            <PageHeader
+                title="SRS Library"
+                description="All words you've studied with their current spaced-repetition intervals."
+                className="mb-6"
+            >
+                <div className="flex flex-wrap gap-2 pt-2">
+                    <Badge variant="outline" className="gap-2"><Clock4 className="h-4 w-4" /> {studiedCount} words</Badge>
+                    <Badge variant="secondary" className="gap-2">{dueSoon} due within 48h</Badge>
                 </div>
-                <Badge variant="outline" className="gap-2"><Clock4 className="h-4 w-4" /> {studiedCount} words</Badge>
-            </div>
+            </PageHeader>
 
-            <Card>
+            <Card className="shadow-sm border-border/60">
                 <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -57,7 +63,9 @@ export default function SrsPage() {
                         </div>
                     )}
                     {error && !loading && (
-                        <div className="px-4 py-4 text-sm text-destructive">{error}</div>
+                        <div className="flex items-center gap-2 px-4 py-4 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4" /> {error}
+                        </div>
                     )}
                     {!loading && !error && items.length === 0 && (
                         <div className="px-4 py-6 text-sm text-muted-foreground">No studied items yet.</div>
@@ -83,6 +91,6 @@ export default function SrsPage() {
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </PageShell>
     );
 }
